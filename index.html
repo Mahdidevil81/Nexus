@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>آینه من | My Mirror</title>
+    
+    <!-- PWA / Mobile Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1154/1154972.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;400;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'JetBrains Mono', monospace;
+        background: #000;
+        height: 100dvh;
+        overflow: hidden;
+        color: #e5e5e5;
+        touch-action: manipulation;
+      }
+      
+      .stars-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+      }
+
+      #stars, #stars2, #stars3 {
+        background: transparent;
+        animation: animStar 150s linear infinite;
+      }
+      
+      #stars { width: 1px; height: 1px; box-shadow: 100px 200px #05f, 500px 100px #05f, 900px 200px #05f, 1300px 300px #05f, 1700px 100px #05f, 450px 350px #05f, 850px 150px #05f, 1250px 450px #05f, 1650px 650px #05f, 550px 50px #05f, 1550px 450px #05f; }
+      #stars2 { width: 2px; height: 2px; box-shadow: 200px 400px #04f, 600px 100px #04f, 1200px 300px #04f, 100px 800px #04f, 800px 500px #04f, 1700px 400px #04f; }
+      #stars3 { width: 3px; height: 3px; box-shadow: 300px 600px #03f, 900px 200px #03f, 500px 300px #03f; }
+
+      @keyframes animStar {
+        from { transform: translateY(0px); }
+        to { transform: translateY(-2000px); }
+      }
+
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+      ::-webkit-scrollbar-thumb { background: rgba(0, 85, 255, 0.2); border-radius: 10px; }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.4/client",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div class="stars-container">
+      <div id="stars"></div>
+      <div id="stars2"></div>
+      <div id="stars3"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
+  </body>
+</html>

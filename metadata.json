@@ -1,0 +1,20 @@
+{
+  "name": "آینه من",
+  "short_name": "آینه",
+  "description": "هوش مصنوعی بازتاب‌دهنده احساسات و سازنده محتوای چندرسانه‌ای",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1154/1154972.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0055ff",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
