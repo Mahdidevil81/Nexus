@@ -21,12 +21,13 @@ export enum SystemStatus {
 export enum GenerationMode {
   TEXT = 'TEXT',
   IMAGE = 'IMAGE',
-  VIDEO = 'VIDEO',
   AUDIO = 'AUDIO',
   LIVE = 'LIVE'
 }
 
 export type Emotion = 'NEUTRAL' | 'SAD' | 'HAPPY' | 'ANGRY' | 'FEAR' | 'SURPRISE' | 'LOVE';
+
+export type ImageSize = '1K' | '2K' | '4K';
 
 export interface Attachment {
   data: string; // Base64
@@ -39,13 +40,19 @@ export interface GroundingLink {
   uri: string;
 }
 
+export interface UserProfile {
+  name: string;
+  languagePreference: 'auto' | 'fa' | 'en';
+  tonePreference: 'poetic' | 'visionary' | 'analytical' | 'casual';
+  interests: string;
+}
+
 export interface AiResponse {
   id: string;
   text?: string;
   mediaUrl?: string;
-  mediaType?: 'image' | 'video' | 'audio';
+  mediaType?: 'image' | 'audio';
   emotion?: Emotion;
   grounding?: GroundingLink[];
   timestamp: number;
-  rawVideoData?: any; // To store Gemini Video Object for extension
 }

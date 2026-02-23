@@ -20,66 +20,88 @@ class AudioManager {
     if (this.currentEmotion === emotion) return;
     this.currentEmotion = emotion;
     if (!this.ctx || !this.masterGain) return;
-    this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.4);
+
+    // Quick crossfade out of existing signal
+    this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+    
     setTimeout(() => {
-      this.oscillators.forEach(osc => { try { osc.stop(); osc.disconnect(); } catch(e) {} });
+      this.oscillators.forEach(osc => { 
+        try { 
+          osc.stop(); 
+          osc.disconnect(); 
+        } catch(e) {} 
+      });
       this.oscillators = [];
       this.startNewSignal(emotion);
-    }, 500);
+    }, 150);
   }
 
   private startNewSignal(emotion: Emotion) {
     if (!this.ctx || !this.masterGain) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
 
-    const createOsc = (freq: number, type: OscillatorType = 'sine', volume: number = 0.05) => {
-      // Ensure frequency is strictly LOW (under 400Hz)
+    const now = this.ctx.currentTime;
+    
+    const createOsc = (freq: number, type: OscillatorType = 'sine', volume: number = 0.05, duration: number = 0.5) => {
       const safeFreq = Math.min(freq, 400);
       const osc = this.ctx!.createOscillator();
       const gain = this.ctx!.createGain();
+      
       osc.type = type;
-      osc.frequency.setValueAtTime(safeFreq, this.ctx!.currentTime);
-      gain.gain.setValueAtTime(0, this.ctx!.currentTime);
+      osc.frequency.setValueAtTime(safeFreq, now);
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + 0.05);
+      gain.gain.setTargetAtTime(0, now + 0.1, duration / 3); // Natural decay
+
       osc.connect(gain);
       gain.connect(this.masterGain!);
-      osc.start();
-      gain.gain.setTargetAtTime(volume, this.ctx!.currentTime, 2);
+      
+      osc.start(now);
+      osc.stop(now + duration + 0.5);
+      
       this.oscillators.push(osc);
       return { osc, gain };
     };
 
     switch (emotion) {
       case 'HAPPY':
-        createOsc(164.81, 'sine', 0.03); // E3
-        createOsc(196.00, 'sine', 0.03); // G3
+        // A light, rising major third
+        createOsc(196.00, 'sine', 0.08, 0.4); // G3
+        setTimeout(() => createOsc(246.94, 'sine', 0.08, 0.4), 100); // B3
         break;
       case 'LOVE':
-        createOsc(174.61, 'sine', 0.04); // F3
-        createOsc(220.00, 'sine', 0.02); // A3
+        // A soft, warm swell
+        const love = createOsc(174.61, 'sine', 0.06, 1.2); // F3
+        love.gain.gain.setTargetAtTime(0.06, now, 0.4);
         break;
       case 'ANGRY':
-        createOsc(55.00, 'triangle', 0.03); // A1
-        createOsc(58.27, 'triangle', 0.03); // Bb1
+        // Low, brief rumble
+        createOsc(65.41, 'triangle', 0.1, 0.3); // C2
         break;
       case 'SAD':
-        createOsc(98.00, 'sine', 0.04); // G2
-        createOsc(116.54, 'sine', 0.03); // Bb2
+        // Descending, soft tone
+        const sad = createOsc(164.81, 'sine', 0.06, 1.0); // E3
+        sad.osc.frequency.exponentialRampToValueAtTime(130.81, now + 0.8); // C3
         break;
       case 'FEAR':
-        createOsc(73.42, 'sine', 0.04); // D2
-        createOsc(77.78, 'sine', 0.04); // Eb2
+        // Slightly dissonant, low hum
+        createOsc(82.41, 'sine', 0.05, 0.8); // E2
+        createOsc(87.31, 'sine', 0.05, 0.8); // F2
         break;
       case 'NEUTRAL':
       default:
-        createOsc(110.00, 'sine', 0.03); // A2
+        // Clean, simple confirmation blip
+        createOsc(220.00, 'sine', 0.07, 0.2); // A3
         break;
     }
-    this.masterGain.gain.setTargetAtTime(0.15, this.ctx.currentTime, 2);
+
+    this.masterGain.gain.setTargetAtTime(0.2, now, 0.1);
   }
 
   public stopSignal() {
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 1);
+      this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
     }
     this.currentEmotion = null;
   }

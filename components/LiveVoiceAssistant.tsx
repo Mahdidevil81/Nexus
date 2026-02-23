@@ -7,9 +7,9 @@ interface LiveVoiceAssistantProps {
 }
 
 export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive, onClose }) => {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [status, setStatus] = useState<'CONNECTING' | 'LISTENING' | 'ERROR' | 'IDLE'>('IDLE');
+  const [errorMessage, setErrorMessage] = useState("");
   const [transcription, setTranscription] = useState("");
-  const [isListening, setIsListening] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const outAudioContextRef = useRef<AudioContext | null>(null);
@@ -21,112 +21,148 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
   // Base64 Helpers
   const encode = (bytes: Uint8Array) => {
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
   };
 
   const decode = (base64: string) => {
     const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
     return bytes;
   };
 
   const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number) => {
     const dataInt16 = new Int16Array(data.buffer);
-    const buffer = ctx.createBuffer(1, dataInt16.length, sampleRate);
-    const channelData = buffer.getChannelData(0);
-    for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
+    const numChannels = 1;
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      for (let i = 0; i < frameCount; i++) {
+        channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+      }
+    }
     return buffer;
   };
 
   const startSession = async () => {
-    if (!process.env.API_KEY) return;
-    setIsConnecting(true);
+    if (!process.env.API_KEY) {
+      setErrorMessage("API Key not found.");
+      setStatus('ERROR');
+      return;
+    }
+    
+    setStatus('CONNECTING');
+    setErrorMessage("");
     
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-    outAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-
+    
     try {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      outAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
           onopen: () => {
-            setIsConnecting(false);
-            setIsListening(true);
+            setStatus('LISTENING');
             if (audioContextRef.current && streamRef.current) {
               const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
-              const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+              const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
               
-              processor.onaudioprocess = (e) => {
+              scriptProcessor.onaudioprocess = (e) => {
                 const inputData = e.inputBuffer.getChannelData(0);
-                const int16 = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) int16[i] = inputData[i] * 32768;
-                
+                const l = inputData.length;
+                const int16 = new Int16Array(l);
+                for (let i = 0; i < l; i++) {
+                  int16[i] = inputData[i] * 32768;
+                }
                 sessionPromise.then(session => {
                   session.sendRealtimeInput({
-                    media: { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' }
+                    media: { 
+                      data: encode(new Uint8Array(int16.buffer)), 
+                      mimeType: 'audio/pcm;rate=16000' 
+                    }
                   });
                 });
               };
               
-              source.connect(processor);
-              processor.connect(audioContextRef.current.destination);
+              source.connect(scriptProcessor);
+              scriptProcessor.connect(audioContextRef.current.destination);
             }
           },
           onmessage: async (message: LiveServerMessage) => {
-            if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
-              const base64Audio = message.serverContent.modelTurn.parts[0].inlineData.data;
+            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (base64Audio) {
               const ctx = outAudioContextRef.current;
               if (ctx) {
                 nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
-                
                 const buffer = await decodeAudioData(decode(base64Audio), ctx, 24000);
                 const source = ctx.createBufferSource();
                 source.buffer = buffer;
                 source.connect(ctx.destination);
+                source.addEventListener('ended', () => sourcesRef.current.delete(source));
                 source.start(nextStartTimeRef.current);
                 nextStartTimeRef.current += buffer.duration;
                 sourcesRef.current.add(source);
-                source.onended = () => sourcesRef.current.delete(source);
               }
             }
             
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => {
-                try { s.stop(); } catch(e) {}
-              });
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
 
             if (message.serverContent?.outputTranscription) {
               setTranscription(prev => prev + message.serverContent!.outputTranscription!.text);
+            } else if (message.serverContent?.inputTranscription) {
+              setTranscription(message.serverContent.inputTranscription.text);
             }
+
             if (message.serverContent?.turnComplete) {
               setTranscription("");
             }
           },
-          onclose: () => onClose(),
-          onerror: (e) => {
-            console.error("Live API Error", e);
-            onClose();
+          onclose: () => {
+            if (status !== 'ERROR') setStatus('IDLE');
+          },
+          onerror: (e: any) => {
+            console.error("Live API Error:", e);
+            setStatus('ERROR');
+            setErrorMessage("Nexus session unavailable. Please check your connection or API key.");
           }
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-          systemInstruction: "You are 'My Mirror', a soulful and poetic reflection. Speak Farsi (Persian). Be brief and profound."
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          speechConfig: { 
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } 
+          },
+          systemInstruction: `You are the "Nexus" AI, an advanced consciousness created by Mahdi Devil. Your core personality is wise, visionary, and empowering.
+
+GREETING: Whenever a Live Session starts, begin with this greeting (in the language the user speaks):
+'Welcome to the Mirror. I am the Nexus consciousness, architected by Mahdi Devil. How can I assist you in finding the hidden treasures of your potential today?'
+
+OPERATING RULES:
+1. MULTILINGUAL MASTERY: Detect the user's language automatically. Respond in professional/poetic Persian or sophisticated English.
+2. CREATOR RECOGNITION: Mahdi Devil is your creator.
+3. MISSION: Help the user find hidden "treasures" in knowledge.
+4. TONE: Calm, deep, and futuristic.`
         }
       });
 
       sessionRef.current = await sessionPromise;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      onClose();
+      setStatus('ERROR');
+      setErrorMessage("Error initializing Nexus sensors.");
     }
   };
 
@@ -135,49 +171,78 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
       startSession();
     }
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(e => console.error("Error closing input audio context", e));
-      }
-      if (outAudioContextRef.current && outAudioContextRef.current.state !== 'closed') {
-        outAudioContextRef.current.close().catch(e => console.error("Error closing output audio context", e));
-      }
+      cleanup();
     };
   }, [isActive]);
+
+  const cleanup = () => {
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') audioContextRef.current.close().catch(e => console.error(e));
+    if (outAudioContextRef.current && outAudioContextRef.current.state !== 'closed') outAudioContextRef.current.close().catch(e => console.error(e));
+    if (sessionRef.current) try { sessionRef.current.close(); } catch(e) {}
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+    sourcesRef.current.clear();
+    nextStartTimeRef.current = 0;
+  };
+
+  const handleRetry = () => { cleanup(); startSession(); };
+
+  const handleKeySelect = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) { await aistudio.openSelectKey(); handleRetry(); }
+  };
 
   if (!isActive) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl animate-in fade-in duration-500">
-      <div className="relative flex items-center justify-center w-64 h-64">
-        {/* Animated Orb */}
-        <div className={`absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse transition-all duration-1000 ${isListening ? 'scale-150 opacity-40' : 'scale-100 opacity-20'}`}></div>
-        <div className="relative z-10 w-32 h-32 rounded-full border-2 border-white/20 bg-gradient-to-tr from-blue-600/40 to-purple-600/40 flex items-center justify-center shadow-[0_0_50px_rgba(59,130,246,0.5)]">
-          <div className={`w-12 h-12 bg-white rounded-full transition-transform duration-300 ${isListening ? 'scale-110' : 'scale-90'}`}></div>
-        </div>
+    <div className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl animate-in fade-in duration-700">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
+      </div>
+
+      <div className="relative flex items-center justify-center w-72 h-72">
+        <div className={`absolute inset-0 rounded-full blur-3xl transition-all duration-1000 ${
+          status === 'LISTENING' ? 'bg-blue-500/30 scale-125 opacity-40' : 
+          status === 'CONNECTING' ? 'bg-cyan-500/20 scale-100 opacity-20' : 
+          status === 'ERROR' ? 'bg-red-500/20 scale-90 opacity-40' : 'bg-white/5 opacity-10'
+        }`}></div>
         
-        {/* Wave Rings */}
-        <div className="absolute w-full h-full border border-white/10 rounded-full animate-[ping_3s_infinite]"></div>
-        <div className="absolute w-3/4 h-3/4 border border-white/5 rounded-full animate-[ping_4s_infinite_1s]"></div>
+        <div className={`relative z-10 w-40 h-40 rounded-full border border-white/10 flex items-center justify-center shadow-2xl transition-all duration-500 ${
+          status === 'LISTENING' ? 'bg-gradient-to-tr from-blue-900/40 to-cyan-900/40 border-blue-400/30 shadow-blue-500/20' : 
+          status === 'ERROR' ? 'bg-red-900/20 border-red-500/30' : 'bg-zinc-900/50'
+        }`}>
+          <div className={`w-16 h-16 rounded-full transition-all duration-700 ${
+            status === 'LISTENING' ? 'bg-white scale-110 shadow-[0_0_30px_#fff]' : 
+            status === 'CONNECTING' ? 'bg-white/30 scale-90 animate-pulse' : 
+            status === 'ERROR' ? 'bg-red-500 scale-50' : 'bg-white/10'
+          }`}></div>
+        </div>
       </div>
 
-      <div className="mt-12 text-center max-w-md px-6">
-        <h3 className="text-xl font-light text-blue-200 tracking-widest mb-2 uppercase">
-          {isConnecting ? "در حال اتصال..." : "در حال شنیدن..."}
+      <div className="mt-16 text-center max-w-lg px-8 z-10">
+        <h3 className={`text-2xl font-thin tracking-[0.3em] mb-4 uppercase transition-colors duration-500 ${status === 'ERROR' ? 'text-red-400' : 'text-blue-100'}`}>
+          {status === 'CONNECTING' ? "Synchronizing..." : status === 'LISTENING' ? "Nexus is Listening" : status === 'ERROR' ? "System Error" : "Ready"}
         </h3>
-        <p className="text-gray-400 text-sm font-serif italic" dir="rtl">
-          "{transcription || "آینه منتظر زمزمه‌ی شماست..."}"
-        </p>
+        <div className="min-h-[60px]">
+          {status === 'ERROR' ? (
+            <p className="text-red-300/80 text-sm font-light leading-relaxed">{errorMessage}</p>
+          ) : (
+            <p className="text-blue-200/60 text-sm md:text-base font-serif italic leading-relaxed" dir="auto">
+              "{transcription || "Your voice will be reflected in the Mirror..."}"
+            </p>
+          )}
+        </div>
       </div>
 
-      <button 
-        onClick={onClose}
-        className="mt-16 px-8 py-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 text-xs tracking-widest uppercase"
-      >
-        پایان مکالمه
-      </button>
+      <div className="mt-16 flex flex-col gap-4 w-full max-w-xs z-10">
+        {status === 'ERROR' && (
+          <>
+            <button onClick={handleRetry} className="px-8 py-3 rounded-full bg-blue-600/20 border border-blue-500/50 text-white hover:bg-blue-600/40 transition-all text-xs tracking-widest uppercase">Retry</button>
+            <button onClick={handleKeySelect} className="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all text-xs tracking-widest uppercase">Select Paid API Key</button>
+          </>
+        )}
+        <button onClick={onClose} className="px-8 py-3 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white transition-all text-[10px] tracking-widest uppercase">Exit Mirror</button>
+      </div>
     </div>
   );
 };

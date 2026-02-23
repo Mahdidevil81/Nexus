@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
   <head>
@@ -31,20 +32,74 @@
         height: 100%;
         z-index: -1;
         overflow: hidden;
+        background: radial-gradient(circle at 50% 50%, #0a0a1a 0%, #000000 100%);
+      }
+
+      .nebula {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+          radial-gradient(circle at 20% 30%, rgba(0, 85, 255, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(20, 20, 40, 0.2) 0%, transparent 80%);
+        filter: blur(60px);
+        animation: nebulaPulse 20s ease-in-out infinite alternate;
       }
 
       #stars, #stars2, #stars3 {
         background: transparent;
-        animation: animStar 150s linear infinite;
+        animation: animStar 200s linear infinite;
       }
       
-      #stars { width: 1px; height: 1px; box-shadow: 100px 200px #05f, 500px 100px #05f, 900px 200px #05f, 1300px 300px #05f, 1700px 100px #05f, 450px 350px #05f, 850px 150px #05f, 1250px 450px #05f, 1650px 650px #05f, 550px 50px #05f, 1550px 450px #05f; }
-      #stars2 { width: 2px; height: 2px; box-shadow: 200px 400px #04f, 600px 100px #04f, 1200px 300px #04f, 100px 800px #04f, 800px 500px #04f, 1700px 400px #04f; }
-      #stars3 { width: 3px; height: 3px; box-shadow: 300px 600px #03f, 900px 200px #03f, 500px 300px #03f; }
+      #stars { 
+        width: 1px; height: 1px; 
+        box-shadow: 100px 200px #fff, 500px 100px #7dd3fc, 900px 200px #fff, 1300px 300px #fde047, 1700px 100px #fff, 450px 350px #fff, 850px 150px #818cf8, 1250px 450px #fff, 1650px 650px #fff, 550px 50px #fff, 1550px 450px #7dd3fc; 
+      }
+      #stars2 { 
+        width: 2px; height: 2px; 
+        box-shadow: 200px 400px #fff, 600px 100px #a5b4fc, 1200px 300px #fff, 100px 800px #fff, 800px 500px #fff, 1700px 400px #fff; 
+      }
+      #stars3 { 
+        width: 3px; height: 3px; 
+        box-shadow: 300px 600px #fff, 900px 200px #fef08a, 500px 300px #fff; 
+      }
 
       @keyframes animStar {
         from { transform: translateY(0px); }
         to { transform: translateY(-2000px); }
+      }
+
+      @keyframes nebulaPulse {
+        from { opacity: 0.6; transform: scale(1); }
+        to { opacity: 1; transform: scale(1.1); }
+      }
+
+      /* Infinite Neon Pulse for Chat Edges */
+      @keyframes neon-pulse {
+        0%, 100% { 
+          border-color: rgba(59, 130, 246, 0.3); 
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.1), inset 0 0 5px rgba(59, 130, 246, 0.05); 
+        }
+        50% { 
+          border-color: rgba(59, 130, 246, 0.8); 
+          box-shadow: 0 0 25px rgba(59, 130, 246, 0.4), inset 0 0 10px rgba(59, 130, 246, 0.1); 
+        }
+      }
+      .neon-border-pulse {
+        animation: neon-pulse 3s infinite ease-in-out;
+      }
+
+      /* Neural Thinking Flick */
+      @keyframes subtle-flicker {
+        0%, 100% { filter: brightness(1) contrast(1); }
+        33% { filter: brightness(1.03) contrast(1.01); }
+        66% { filter: brightness(0.98) contrast(0.99); }
+      }
+      .thinking-flicker {
+        animation: subtle-flicker 0.2s infinite;
       }
 
       ::-webkit-scrollbar { width: 4px; }
@@ -67,6 +122,7 @@
   </head>
   <body>
     <div class="stars-container">
+      <div class="nebula"></div>
       <div id="stars"></div>
       <div id="stars2"></div>
       <div id="stars3"></div>

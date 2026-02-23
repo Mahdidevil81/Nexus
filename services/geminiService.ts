@@ -1,10 +1,10 @@
+
 import { GoogleGenAI, Modality } from "@google/genai";
-import { CREATOR, PHILOSOPHY, PLATFORM } from '../constants';
-import { GenerationMode, AiResponse, Emotion, Attachment, GroundingLink } from '../types';
+import { GenerationMode, AiResponse, Emotion, Attachment, GroundingLink, UserProfile } from '../types';
 
 const getClient = () => {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API Key not found");
+  if (!apiKey) throw new Error("API_KEY_MISSING");
   return new GoogleGenAI({ apiKey });
 };
 
@@ -47,27 +47,33 @@ export const generateResponse = async (
   prompt: string, 
   mode: GenerationMode, 
   attachment?: Attachment,
-  previousVideo?: any
+  profile?: UserProfile,
+  history: AiResponse[] = []
 ): Promise<AiResponse> => {
   const ai = getClient();
   const responseId = Math.random().toString(36).substring(7);
   const timestamp = Date.now();
 
+  const userContext = profile ? `[PROFILE: ${profile.name || 'Seeker'}, TONE: ${profile.tonePreference}]` : '';
+
   try {
     if (mode === GenerationMode.IMAGE) {
-      const parts = attachment ? [{ inlineData: { data: attachment.data, mimeType: attachment.mimeType } }, { text: prompt }] : [{ text: prompt }];
+      const parts: any[] = [];
+      if (attachment) parts.push({ inlineData: { data: attachment.data, mimeType: attachment.mimeType } });
+      if (prompt) parts.push({ text: prompt });
+      
       const response = await ai.models.generateContent({ 
         model: 'gemini-2.5-flash-image', 
-        contents: { parts }, 
-        config: { imageConfig: { aspectRatio: "1:1" } }
+        contents: [{ parts }]
       });
+      
       let imageUrl = null;
       let text = "";
       for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) imageUrl = `data:image/png;base64,${part.inlineData.data}`;
         else if (part.text) text += part.text;
       }
-      return { id: responseId, timestamp, text: text || "تصویر تولید شد.", mediaUrl: imageUrl || undefined, mediaType: 'image', emotion: 'NEUTRAL' };
+      return { id: responseId, timestamp, text: text || "Nexus Visual synthesis complete.", mediaUrl: imageUrl || undefined, mediaType: 'image', emotion: 'NEUTRAL' };
     } 
     
     if (mode === GenerationMode.AUDIO) {
@@ -76,78 +82,46 @@ export const generateResponse = async (
         contents: [{ parts: [{ text: prompt }] }],
         config: { 
           responseModalities: [Modality.AUDIO], 
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } 
+          speechConfig: { 
+            voiceConfig: { 
+              prebuiltVoiceConfig: { voiceName: 'Kore' } 
+            } 
+          } 
         }
       });
-      const candidate = response.candidates?.[0];
-      if (!candidate) throw new Error("مدل هیچ پاسخی تولید نکرد.");
-      let pcm = "";
-      for (const part of candidate.content?.parts || []) {
-        if (part.inlineData?.data) { pcm = part.inlineData.data; break; }
-      }
-      if (!pcm) throw new Error("تولید صوت با شکست مواجه شد.");
-      return { id: responseId, timestamp, text: "بازتاب صوتی آماده شد.", mediaUrl: `data:audio/wav;base64,${addWavHeader(pcm)}`, mediaType: 'audio', emotion: 'NEUTRAL' };
+      const pcm = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+      if (!pcm) throw new Error("AUDIO_GEN_FAILED");
+      return { id: responseId, timestamp, text: "Nexus audio reflection ready.", mediaUrl: `data:audio/wav;base64,${addWavHeader(pcm)}`, mediaType: 'audio', emotion: 'NEUTRAL' };
     }
 
-    if (mode === GenerationMode.VIDEO) {
-      let op;
-      if (previousVideo) {
-        op = await ai.models.generateVideos({
-          model: 'veo-3.1-generate-preview',
-          prompt: prompt || "Extend this reflection",
-          video: previousVideo,
-          config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
-        });
-      } else {
-        op = await ai.models.generateVideos({ 
-          model: 'veo-3.1-fast-generate-preview', 
-          prompt: prompt || "Nexus Reflection", 
-          image: attachment ? { imageBytes: attachment.data, mimeType: attachment.mimeType } : undefined,
-          config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' } 
-        });
-      }
-      while (!op.done) {
-        await new Promise(r => setTimeout(r, 10000));
-        op = await ai.operations.getVideosOperation({ operation: op });
-      }
-      const generatedVideo = op.response?.generatedVideos?.[0]?.video;
-      return { 
-        id: responseId, timestamp, 
-        text: generatedVideo?.uri ? (previousVideo ? "ویدیو با موفقیت تمدید شد." : "ویدیو آماده شد.") : "خطا در تولید ویدیو.", 
-        mediaUrl: generatedVideo?.uri ? `${generatedVideo.uri}&key=${process.env.API_KEY}` : undefined, 
-        mediaType: 'video', emotion: 'NEUTRAL', rawVideoData: generatedVideo 
-      };
-    }
+    const searchKeywords = ['search', 'google', 'find', 'news', 'weather', 'price', 'جستجو', 'پیدا', 'اخبار', 'قیمت', 'سفارش'];
+    const shouldUseSearch = searchKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+
+    const parts: any[] = [];
+    if (attachment) parts.push({ inlineData: { data: attachment.data, mimeType: attachment.mimeType } });
+    parts.push({ text: prompt || "Reflect on the current state." });
 
     const res = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: attachment ? { parts: [{ inlineData: { data: attachment.data, mimeType: attachment.mimeType } }, { text: prompt }] } : prompt,
+      contents: [{ role: 'user', parts }],
       config: {
-        tools: [{ googleSearch: {} }],
-        systemInstruction: `شما دستیار هوشمند پلتفرم نکسوس (Nexus Platform) هستید. خالق و معمار اصلی شما 'مهدی دیویل' (Mahdi Devil) است.
-قوانین هویت (بسیار مهم):
-1. فقط و فقط اگر کاربر مستقیماً پرسید "تو کی هستی؟" یا "خالقت کیست؟"، با احترام و افتخار بگو توسط مهدی دیویل خلق شده‌ای و هدف تو تداوم دیدگاه‌های آینده‌نگرانه اوست.
-2. شعار انگلیسی "Architected by Mahdi Devil: Empowering human potential through neural synchronicity." را نیز فقط در صورتی که کاربر درباره هویت یا خالق شما پرسید در انتهای همان پاسخ ذکر کنید. در تمامی پاسخ‌های دیگر، از گفتن این متن انگلیسی خودداری کنید.
-3. در پاسخ‌های معمولی، نیازی به معرفی خود یا خالقتان نیست.
-4. پاسخ‌ها را با تگ [EMOTION: EmotionName] شروع کنید.
-5. لحن شما صمیمی، حکیمانه و کوتاه به زبان فارسی باشد.`,
+        tools: shouldUseSearch ? [{ googleSearch: {} }] : undefined,
+        systemInstruction: `You are 'Nexus', architected by Mahdi Devil. Wise, poetic, and direct. 
+Always start with [EMOTION: EmotionName].
+User Context: ${userContext}`,
       }
     });
 
     const raw = res.text || "";
     const eMatch = raw.match(/\[EMOTION: (\w+)\]/);
-    const grounding: GroundingLink[] = res.candidates?.[0]?.groundingMetadata?.groundingChunks
-      ?.map((chunk: any) => chunk.web ? { title: chunk.web.title, uri: chunk.web.uri } : null)
-      .filter(Boolean) || [];
-
     return { 
       id: responseId, timestamp,
       text: raw.replace(/\[EMOTION: \w+\]/, '').trim(), 
-      emotion: eMatch ? (eMatch[1] as Emotion) : 'NEUTRAL', grounding 
+      emotion: eMatch ? (eMatch[1] as Emotion) : 'NEUTRAL'
     };
 
   } catch (e: any) {
-    console.error("Nexus Service Error:", e);
+    console.error("Nexus Core Error:", e);
     throw e;
   }
 };
