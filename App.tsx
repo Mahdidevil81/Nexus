@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import AiResponsePanel from './components/AiResponsePanel';
 import FooterLinks from './components/FooterLinks';
 import TerminalHeader from './components/TerminalHeader';
@@ -475,6 +476,7 @@ const App: React.FC = () => {
         onClose={() => setShowLive(false)} 
         userProfile={userProfile}
       />
+      <Analytics />
     </div>
   );
 };
