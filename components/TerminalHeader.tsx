@@ -1,19 +1,37 @@
 import React from 'react';
+import { SystemStatus } from '../types';
 
 interface TerminalHeaderProps {
   onMenuClick?: () => void;
   onProfileClick?: () => void;
+  status: SystemStatus;
 }
 
-const TerminalHeader: React.FC<TerminalHeaderProps> = ({ onMenuClick, onProfileClick }) => {
+const TerminalHeader: React.FC<TerminalHeaderProps> = ({ onMenuClick, onProfileClick, status }) => {
+  const getStatusConfig = () => {
+    switch (status) {
+      case SystemStatus.PROCESSING:
+        return { color: 'bg-blue-500', label: 'SYNCING', pulse: 'animate-pulse' };
+      case SystemStatus.ERROR:
+        return { color: 'bg-red-500', label: 'ERROR', pulse: 'animate-ping' };
+      default:
+        return { color: 'bg-emerald-500', label: 'ONLINE', pulse: '' };
+    }
+  };
+
+  const config = getStatusConfig();
+
   return (
     <div className="w-full relative py-3 mb-6 select-none">
       <div className="flex items-center justify-between">
         
         {/* Left: Status Badge */}
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 backdrop-blur-md">
-            <span className="text-[10px] font-bold tracking-widest text-blue-400">LIVE</span>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${status === SystemStatus.ERROR ? 'border-red-500/30 bg-red-500/10' : 'border-blue-500/30 bg-blue-500/10'} backdrop-blur-md`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${config.color} ${config.pulse}`}></div>
+            <span className={`text-[10px] font-bold tracking-widest ${status === SystemStatus.ERROR ? 'text-red-400' : 'text-blue-400'}`}>
+              {config.label}
+            </span>
           </div>
           
           <button 

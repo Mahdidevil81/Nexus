@@ -27,8 +27,6 @@ export enum GenerationMode {
 
 export type Emotion = 'NEUTRAL' | 'SAD' | 'HAPPY' | 'ANGRY' | 'FEAR' | 'SURPRISE' | 'LOVE';
 
-export type ImageSize = '1K' | '2K' | '4K';
-
 export interface Attachment {
   data: string; // Base64
   mimeType: string;
@@ -40,19 +38,35 @@ export interface GroundingLink {
   uri: string;
 }
 
+export type Theme = 'DARK_NEBULA' | 'CYBERPUNK_GLOW' | 'MINIMALIST_TECH';
+
 export interface UserProfile {
   name: string;
   languagePreference: 'auto' | 'fa' | 'en';
   tonePreference: 'poetic' | 'visionary' | 'analytical' | 'casual';
+  themePreference: Theme;
   interests: string;
+}
+
+export interface ImageOptions {
+  aspectRatio?: "1:1" | "3:4" | "4:3" | "9:16" | "16:9";
+  style?: string;
+}
+
+export interface AudioOptions {
+  voice?: 'male' | 'female';
 }
 
 export interface AiResponse {
   id: string;
+  prompt?: string;
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'audio';
+  imageOptions?: ImageOptions;
+  audioOptions?: AudioOptions;
   emotion?: Emotion;
   grounding?: GroundingLink[];
+  suggestions?: string[];
   timestamp: number;
 }

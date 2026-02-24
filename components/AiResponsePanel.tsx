@@ -52,14 +52,95 @@ const useTypewriter = (text: string, speed: number = 30) => {
 
 const CustomAudioPlayer: React.FC<{ url: string }> = ({ url }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationRef = useRef<number>(0);
+
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
+
+  const initAudioContext = () => {
+    if (!audioContextRef.current && audioRef.current) {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const analyser = ctx.createAnalyser();
+      const source = ctx.createMediaElementSource(audioRef.current);
+      
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      
+      analyser.fftSize = 256;
+      
+      audioContextRef.current = ctx;
+      analyserRef.current = analyser;
+      sourceRef.current = source;
+    }
+  };
+
+  const drawWaveform = () => {
+    if (!canvasRef.current || !analyserRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    const draw = () => {
+      animationRef.current = requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(dataArray);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#3b82f6'; // blue-500
+      ctx.beginPath();
+      
+      const sliceWidth = canvas.width * 1.0 / bufferLength;
+      let x = 0;
+      
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * canvas.height / 2;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        
+        x += sliceWidth;
+      }
+      
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    };
+    
+    draw();
+  };
 
   const togglePlay = () => {
     if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play();
+      initAudioContext();
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+
+      if (isPlaying) {
+        audioRef.current.pause();
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      } else {
+        audioRef.current.play();
+        drawWaveform();
+      }
       setIsPlaying(!isPlaying);
     }
   };
@@ -75,7 +156,10 @@ const CustomAudioPlayer: React.FC<{ url: string }> = ({ url }) => {
     if (audioRef.current) setDuration(audioRef.current.duration);
   };
 
-  const onEnded = () => setIsPlaying(false);
+  const onEnded = () => {
+    setIsPlaying(false);
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+  };
 
   return (
     <div className="w-full bg-white/5 backdrop-blur-[40px] border border-white/10 rounded-[2rem] p-6 mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700 shadow-2xl">
@@ -87,6 +171,21 @@ const CustomAudioPlayer: React.FC<{ url: string }> = ({ url }) => {
         onEnded={onEnded}
       />
       
+      {/* Waveform Visualization */}
+      <div className="h-16 w-full relative overflow-hidden rounded-xl bg-black/20 border border-white/5">
+        <canvas 
+          ref={canvasRef} 
+          width={400} 
+          height={64} 
+          className="w-full h-full opacity-60"
+        />
+        {!isPlaying && progress === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[8px] uppercase tracking-[0.3em] text-gray-600">Neural Frequency Standby</span>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-6">
         <button 
           onClick={togglePlay}
@@ -340,16 +439,38 @@ const AiResponsePanel: React.FC<AiResponsePanelProps> = ({ response, isTyping, o
               <div className="mt-6 space-y-6">
                 <div className="rounded-[2rem] overflow-hidden border border-white/10 bg-black/60 relative group shadow-2xl">
                   {response.mediaType === 'image' && (
-                    <div className="flex items-center justify-center bg-zinc-950 min-h-[400px] overflow-hidden p-4 relative">
-                      <img 
-                        src={response.mediaUrl} 
-                        style={{ 
-                          filter: `${activeVisualPreset.filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) hue-rotate(${hueRotate}deg)`, 
-                          transform: `rotate(${rotation}deg)` 
-                        }}
-                        className="max-w-full max-h-[75vh] object-contain transition-all duration-700 rounded-2xl" 
-                        alt="Nexus Generation" 
-                      />
+                    <div className="flex flex-col bg-zinc-950 min-h-[400px] overflow-hidden relative">
+                      <div className="flex items-center justify-center p-4 flex-grow">
+                        <img 
+                          src={response.mediaUrl} 
+                          style={{ 
+                            filter: `${activeVisualPreset.filter} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) hue-rotate(${hueRotate}deg)`, 
+                            transform: `rotate(${rotation}deg)` 
+                          }}
+                          className="max-w-full max-h-[75vh] object-contain transition-all duration-700 rounded-2xl cursor-zoom-in" 
+                          alt="Nexus Generation" 
+                          onClick={() => window.open(response.mediaUrl, '_blank')}
+                        />
+                      </div>
+                      
+                      {response.prompt && (
+                        <div className="px-6 py-4 bg-black/40 border-t border-white/5 backdrop-blur-md">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2">Original Neural Imprint</p>
+                          <p className="text-xs text-gray-300 font-light italic leading-relaxed">"{response.prompt}"</p>
+                          {response.imageOptions && (
+                            <div className="mt-3 flex gap-3">
+                              <div className="flex flex-col">
+                                <span className="text-[8px] text-gray-600 uppercase tracking-widest">Ratio</span>
+                                <span className="text-[10px] text-blue-400 font-mono">{response.imageOptions.aspectRatio}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[8px] text-gray-600 uppercase tracking-widest">Style</span>
+                                <span className="text-[10px] text-fuchsia-400 font-mono uppercase">{response.imageOptions.style}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   {response.mediaType === 'audio' && (

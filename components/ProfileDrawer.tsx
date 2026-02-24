@@ -10,17 +10,46 @@ interface ProfileDrawerProps {
   syncScore?: number;
 }
 
-const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile, onUpdate, syncScore = 0 }) => {
+const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile, onUpdate }) => {
+  const [localProfile, setLocalProfile] = React.useState<UserProfile>(profile);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+  const [hasSaved, setHasSaved] = React.useState(false);
+
+  React.useEffect(() => {
+    setLocalProfile(profile);
+  }, [profile, isOpen]);
+
   const handleChange = (field: keyof UserProfile, value: string) => {
-    onUpdate({ ...profile, [field]: value });
+    setLocalProfile(prev => ({ ...prev, [field]: value }));
+    setHasSaved(false);
   };
 
-  // Fix: Ensure syncScore is treated as a number
-  const syncPercent = Math.min(100, (syncScore || 0) * 5);
+  const calculateSync = () => {
+    let score = 0;
+    if (localProfile.name) score += 30;
+    if (localProfile.interests) score += 40;
+    if (localProfile.tonePreference) score += 15;
+    if (localProfile.languagePreference) score += 15;
+    return score;
+  };
+
+  const syncPercent = hasSaved ? 100 : calculateSync();
+
+  const handleSave = () => {
+    setIsSyncing(true);
+    setTimeout(() => {
+      onUpdate(localProfile);
+      setIsSyncing(false);
+      setHasSaved(true);
+    }, 1500);
+  };
 
   const resetProfile = () => {
     if (window.confirm("آیا از بازنشانی تنظیمات نکسوس اطمینان دارید؟ (Reset Core Settings?)")) {
-      onUpdate({ name: '', languagePreference: 'auto', tonePreference: 'poetic', interests: '' });
+      const reset: UserProfile = { name: '', languagePreference: 'auto', tonePreference: 'poetic', themePreference: 'DARK_NEBULA', interests: '' };
+      setLocalProfile(reset);
+      onUpdate(reset);
+      setHasSaved(false);
     }
   };
 
@@ -41,16 +70,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
 
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Sync Level</span>
+                <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">
+                  {isSyncing ? 'Syncing...' : hasSaved ? 'Neural Link 100%' : 'Sync Level'}
+                </span>
                 <span className="text-[10px] text-gray-400 font-mono">{syncPercent}%</span>
               </div>
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000"
+                  className={`h-full transition-all duration-1000 ${hasSaved ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]'}`}
                   style={{ width: `${syncPercent}%` }}
                 />
               </div>
-              <p className="text-[8px] text-gray-600 uppercase tracking-[0.2em] animate-pulse">Neural link established</p>
+              <p className={`text-[8px] uppercase tracking-[0.2em] ${hasSaved ? 'text-emerald-400' : 'text-gray-600 animate-pulse'}`}>
+                {hasSaved ? 'Identity verified by Nexus' : 'Neural link establishing...'}
+              </p>
             </div>
           </div>
           
@@ -59,7 +92,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
               <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Subject Identity</label>
               <input 
                 type="text" 
-                value={profile.name}
+                value={localProfile.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none transition-all font-light text-sm"
                 placeholder="Name..."
@@ -69,7 +102,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
             <div className="space-y-2">
               <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Core Language</label>
               <select 
-                value={profile.languagePreference}
+                value={localProfile.languagePreference}
                 onChange={(e) => handleChange('languagePreference', e.target.value as any)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none transition-all font-light text-sm appearance-none"
               >
@@ -87,7 +120,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
                     key={t}
                     onClick={() => handleChange('tonePreference', t as any)}
                     className={`px-3 py-2 rounded-lg text-[9px] uppercase tracking-widest border transition-all ${
-                      profile.tonePreference === t 
+                      localProfile.tonePreference === t 
                       ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.2)]' 
                       : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
                     }`}
@@ -99,21 +132,70 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
             </div>
 
             <div className="space-y-2">
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Visual Theme</label>
+              <div className="flex flex-col gap-2">
+                {[
+                  { id: 'DARK_NEBULA', label: 'Dark Nebula', color: 'bg-blue-900/40 border-blue-500' },
+                  { id: 'CYBERPUNK_GLOW', label: 'Cyberpunk Glow', color: 'bg-fuchsia-900/40 border-fuchsia-500' },
+                  { id: 'MINIMALIST_TECH', label: 'Minimalist Tech', color: 'bg-zinc-800/40 border-zinc-400' }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleChange('themePreference', t.id as any)}
+                    className={`px-4 py-3 rounded-xl text-[10px] uppercase tracking-widest border transition-all flex items-center justify-between ${
+                      localProfile.themePreference === t.id 
+                      ? `${t.color} text-white shadow-[0_0_15px_rgba(0,0,0,0.3)]` 
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                    }`}
+                  >
+                    <span>{t.label}</span>
+                    {localProfile.themePreference === t.id && <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Nexus Directives</label>
               <textarea 
-                value={profile.interests}
+                value={localProfile.interests}
                 onChange={(e) => handleChange('interests', e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 outline-none transition-all font-light text-sm h-32 resize-none leading-relaxed"
                 placeholder="Describe your goals, interests, or how the AI should treat you..."
               />
             </div>
 
-            <button 
-              onClick={resetProfile}
-              className="w-full py-3 rounded-xl border border-red-500/20 text-red-500/50 text-[10px] uppercase tracking-widest hover:bg-red-500/10 transition-all"
-            >
-              Reset Core Settings
-            </button>
+            <div className="space-y-3 pt-4">
+              <button 
+                onClick={handleSave}
+                disabled={isSyncing}
+                className={`w-full py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+                  hasSaved 
+                  ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                  : 'bg-blue-600 text-white hover:bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                }`}
+              >
+                {isSyncing ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    Syncing Neural Data...
+                  </>
+                ) : hasSaved ? (
+                  <>
+                    <span>✓</span> Neural Link Established
+                  </>
+                ) : (
+                  "Save & Establish Link"
+                )}
+              </button>
+
+              <button 
+                onClick={resetProfile}
+                className="w-full py-3 rounded-xl border border-red-500/20 text-red-500/50 text-[10px] uppercase tracking-widest hover:bg-red-500/10 transition-all"
+              >
+                Reset Core Settings
+              </button>
+            </div>
           </div>
           
           <div className="p-6 border-t border-white/5 bg-black/40">
