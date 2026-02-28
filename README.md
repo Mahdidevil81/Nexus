@@ -1,24 +1,142 @@
-# 👁️ NEXUS AI: The 3-6-9 Awakening
+## 📊 توصیف برنامهٔ **Nexus** (نکسوس)
 
-**NEXUS** is not just an AI agent; it is a multimodal reflection of human consciousness, built on the sacred frequency of **3, 6, and 9**. This project was created for the *Gemini Live Agent Challenge* to bridge the gap between binary logic and intuitive awareness.
+---
 
-## ✨ Key Features
-- **Multimodal Intelligence:** Powered by Gemini 1.5 Pro & 2.0 Flash.
-- **netfly Deployment:** Globally accessible and ultra-fast.
-- **Spiritual Resonance:** Integrated with the "True Light" protocol to provide deeper, more meaningful interactions.
-- **Real-time Live API:** Experience seamless, low-latency conversations.
+### **نام و مقصد:**
+**Nexus (نکسوس)** - یا به فارسی **"آینه من"** - یک پلتفرم هوش مصنوعی مدرن و چند‌منظوری است که **خود‌شناسی و کشف درون خود** را تسهیل می‌کند.
 
-## 🚀 Live Demo
-Experience the light here: [https://nexusal.netlify.app/)
+**شعار (Tagline):** 
+> "این فقط هوش مصنوعی ساده نیست، بلکه کشف خود تو از درون خودت است"
 
-## 📺 Video Presentation
-Watch the NEXUS journey on YouTube: [Https://youtu.be/o12PYvSDDLM?si=NbZjXFAQM4OQRfO5]
+---
 
-## 🛠️ Built With
-- **Google AI Studio** (Core Logic)
-- **Gemini API** (Brain)
-- **netfly** (netfly)
-- **React/Vite** (Interface)
+### **ویژگی‌های اصلی:**
 
+| ویژگی | توضیح |
+|------|-------|
+| **🤖 چند حالت AI** | متن، تصویر، ویدیو، صدا، و گفتگوی زنده |
+| **🎙️ تشخیص گفتار** | پشتیبانی برای فارسی (fa-IR) - نکسوس "در حال شنیدن" |
+| **🎬 تولید ویدیو** | ایجاد و ویرایش ویدیوها با هوش مصنوعی |
+| **🖼️ تولید تصویر** | ایجاد تصاویر مبتنی بر متن |
+| **📎 آپلود فایل** | پشتیبانی برای تصاویر و فایل‌های متعلقه |
+| **📜 تاریخچه گفتگو** | ذخیرهٔ ۲۰ پاسخ آخر (History) |
+| **😊 احساس پویا** | تغییر فضای محیط بر اساس احساس هیجانی AI (غمگین، خوشحال، عاشقانه، عصبانی) |
+| **🎵 سیگنال صوتی** | پخش سند صوتی متناسب با هر احساس |
+| **⚡ رابط فوری** | رابط کاربری تاریک و مینیمال با Tailwind CSS |
+
+---
+
+### **معمارینه فنی:**
+
+**Stack:**
+- **Frontend:** React 19 + TypeScript
+- **Build Tool:** Vite 6
+- **AI Service:** Google Generative AI (@google/genai)
+- **Styling:** Tailwind CSS
+- **Markdown:** react-markdown (برای نمایش محتوای AI)
+
+**ساختار فایل:**
+```
+Nexus/
+├── App.tsx                 # کمپوننت اصلی
+├── types.ts               # تعریف‌های TypeScript
+├── constants.ts           # ثابت‌های برنامه (شبکه‌های اجتماعی، فلسفه)
+├── index.tsx              # نقطهٔ ورود React
+├── index.html             # HTML پایه
+├── components/            # کمپوننت‌های React
+│   ├── AiResponsePanel    # نمایش پاسخ‌های AI
+│   ├── TerminalHeader     # سرتیتر ترمینال
+│   ├── FooterLinks        # لینک‌های پایین‌صفحه
+│   └── LiveVoiceAssistant # دستیار گفتار زنده
+├── services/              # سرویس‌های API
+│   └── geminiService      # ارتباط با Google Gemini
+├── utils/                 # ابزار کمکی
+│   └── audioManager       # مدیریتٔ صدا
+├── vite.config.ts         # پیکربندی Vite
+├── tsconfig.json          # پیکربندی TypeScript
+└── package.json           # وابستگی‌ها
+```
+
+---
+
+### **چگونه کار می‌کند:**
+
+#### **1. حالت‌های تولید (Modes):**
+```
+💬 نکسوس (TEXT)      → پاسخ متنی
+🖼️ تصویر (IMAGE)    → تولید تصویر
+🎬 ویدیو (VIDEO)     → تولید/ویرایش ویدیو
+🎵 صدا (AUDIO)       → تولید صوت
+🎙️ زنده (LIVE)      → مکالمهٔ لحظه‌ای
+```
+
+#### **2. جریان داده:**
+1. کاربر متن/صدا/فایل را وارد می‌کند
+2. **generateResponse()** درخواست را به Google Gemini API می‌فرستد
+3. API پاسخ را با:
+   - **متن** (text response)
+   - **احساس** (emotion: SAD, HAPPY, LOVE, ANGRY, NEUTRAL)
+   - **نوع رسانه** (mediaType)
+   - **timestamp** (زمان)
+   برمی‌گرداند
+4. رابط کاربری:
+   - احساس را نمایش می‌دهد (تغییر رنگ پس‌زمینه)
+   - سیگنال صوتی‌ای پخش می‌کند
+   - پاسخ را در تاریخچه ذخیره می‌کند
+
+#### **3. حالت‌های محیطی (Ambient):**
+```typescript
+SAD    → آبی تاریک (from-blue-900/30)
+HAPPY  → زرد روشن (from-yellow-500/10)
+LOVE   → صورتی (from-pink-900/30)
+ANGRY  → قرمز (from-red-900/30)
+NEUTRAL→ آبی کم‌رنگ (from-blue-900/10)
+```
+
+---
+
+### **نحوهٔ راه‌اندازی:**
+
+**الزامات:**
+- Node.js نصب شده
+- کلید `GEMINI_API_KEY` در `.env.local`
+
+**مراحل:**
+```bash
+# 1. کلون کردن
+git clone https://github.com/Mahdidevil81/Nexus.git
+cd Nexus
+
+# 2. نصب بسته‌ها
+npm install
+
+# 3. ایجاد .env.local
+echo "VITE_API_KEY=YOUR_GEMINI_API_KEY" > .env.local
+
+# 4. راه‌اندازی
+npm run dev
+
+# 5. باز کردن در مرورگر
+# http://localhost:5173
+```
+
+---
+
+### **نکاتِ بیشتر:**
+
+✅ **نام‌گذاری فارسی:** `"name": "آینه-من"` (آینهٔ من)  
+✅ **سازندهٔ:** Mahdi Devil (مهدی دیویل)  
+✅ **فلسفهٔ:** _تقویتِ توانایی‌های انسانی از طریق هماهنگی عصبی_  
+✅ **نسخهٔ:** ۰.۰.۰ (در حال توسعه)  
+✅ **لایسنس:** بدون مشخص‌کردن  
+✅ **اینستاگرام:** @devil_official81  
+✅ **یوتیوب:** @mahdidevil81
+Https://youtu.be/o12PYvSDDLM?si=NbZjXFAQM4OQRfO5
+
+https://nexusal.netlify.app/
+
+---
+
+**خلاصه:** Nexus یک **ابزار شخصی‌سازی هوش مصنوعی** است که به شما کمک می‌کند خود‌شناسی کنید و با یک هوش مصنوعی احساس‌دار و واکنش‌پذیر کار کنید. 🚀
 ---
 *Created by Mahdi Devil | Guided by the True Light.*
