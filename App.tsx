@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Analytics } from '@vercel/analytics/react';
 import AiResponsePanel from './components/AiResponsePanel';
 import FooterLinks from './components/FooterLinks';
 import TerminalHeader from './components/TerminalHeader';
 import HistoryDrawer from './components/HistoryDrawer';
 import ProfileDrawer from './components/ProfileDrawer';
+import PremiumModal from './components/PremiumModal';
 import SplashScreen from './components/SplashScreen';
+import QuantumBackground from './components/QuantumBackground';
 import { LiveVoiceAssistant } from './components/LiveVoiceAssistant';
 import { SystemStatus, GenerationMode, AiResponse, Emotion, Attachment, UserProfile, ImageOptions } from './types';
 import { generateResponse } from './services/geminiService';
@@ -20,17 +21,24 @@ const defaultProfile: UserProfile = {
   languagePreference: 'auto',
   tonePreference: 'poetic',
   themePreference: 'DARK_NEBULA',
-  interests: ''
+  interests: '',
+  isPremium: false,
+  imageCount: 0,
+  audioMinutes: 0
 };
 
 // Nexus 369 Core Logo Component
-const NexusLogo = () => (
-  <div className="relative w-full h-full flex items-center justify-center animate-in fade-in zoom-in duration-1000">
-     <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_30px_rgba(6,182,212,0.4)]">
+const NexusLogo = ({ isProcessing }: { isProcessing?: boolean }) => (
+  <div className={`relative w-full h-full flex items-center justify-center animate-in fade-in zoom-in duration-1000 ${isProcessing ? 'scale-105' : 'scale-100'} transition-transform duration-500`}>
+     <svg viewBox="0 0 200 200" className={`w-full h-full drop-shadow-[0_0_30px_rgba(6,182,212,0.4)] ${isProcessing ? 'animate-pulse' : ''}`}>
         <defs>
            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" style={{stopColor: '#06b6d4', stopOpacity: 1}} />
               <stop offset="100%" style={{stopColor: '#d946ef', stopOpacity: 1}} />
+           </linearGradient>
+           <linearGradient id="gradYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{stopColor: '#fbbf24', stopOpacity: 1}} />
+              <stop offset="100%" style={{stopColor: '#f59e0b', stopOpacity: 1}} />
            </linearGradient>
            <filter id="glow">
               <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -43,8 +51,13 @@ const NexusLogo = () => (
         
         {/* Outer Tech Ring */}
         <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-        <circle cx="100" cy="100" r="88" fill="none" stroke="url(#grad1)" strokeWidth="1.5" strokeDasharray="60 30" strokeLinecap="round" className="animate-[spin_15s_linear_infinite] origin-center" />
-        <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(6,182,212,0.3)" strokeWidth="1" strokeDasharray="2 4" className="animate-[spin_25s_linear_infinite_reverse] origin-center" />
+        <circle cx="100" cy="100" r="88" fill="none" stroke="url(#grad1)" strokeWidth="1.5" strokeDasharray="60 30" strokeLinecap="round" className={`${isProcessing ? 'animate-[spin_5s_linear_infinite]' : 'animate-[spin_15s_linear_infinite]'} origin-center transition-all duration-1000`} />
+        <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(6,182,212,0.3)" strokeWidth="1" strokeDasharray="2 4" className={`${isProcessing ? 'animate-[spin_10s_linear_infinite_reverse]' : 'animate-[spin_25s_linear_infinite_reverse]'} origin-center transition-all duration-1000`} />
+
+        {/* Processing Glow Ring */}
+        {isProcessing && (
+          <circle cx="100" cy="100" r="75" fill="none" stroke="url(#gradYellow)" strokeWidth="1" strokeDasharray="10 10" className="animate-[spin_3s_linear_infinite] origin-center opacity-50" />
+        )}
 
         {/* Hexagon 9 (Top Center) */}
         <g transform="translate(100, 35)">
@@ -52,16 +65,16 @@ const NexusLogo = () => (
            <text x="0" y="4" textAnchor="middle" fill="#06b6d4" fontSize="10" fontFamily="monospace" fontWeight="bold">9</text>
         </g>
         
-        {/* Hexagon 3 (Bottom Right) */}
+        {/* Hexagon 6 (Bottom Right) */}
         <g transform="translate(160, 140)">
-           <path d="M0 -12 L10.4 -6 L10.4 6 L0 12 L-10.4 6 L-10.4 -6 Z" fill="rgba(0,0,0,0.8)" stroke="#d946ef" strokeWidth="1.5" />
-           <text x="0" y="4" textAnchor="middle" fill="#d946ef" fontSize="10" fontFamily="monospace" fontWeight="bold">3</text>
-        </g>
-
-        {/* Hexagon 6 (Bottom Left) */}
-        <g transform="translate(40, 140)">
            <path d="M0 -12 L10.4 -6 L10.4 6 L0 12 L-10.4 6 L-10.4 -6 Z" fill="rgba(0,0,0,0.8)" stroke="#8b5cf6" strokeWidth="1.5" />
            <text x="0" y="4" textAnchor="middle" fill="#8b5cf6" fontSize="10" fontFamily="monospace" fontWeight="bold">6</text>
+        </g>
+
+        {/* Hexagon 3 (Bottom Left) */}
+        <g transform="translate(40, 140)">
+           <path d="M0 -12 L10.4 -6 L10.4 6 L0 12 L-10.4 6 L-10.4 -6 Z" fill="rgba(0,0,0,0.8)" stroke="#d946ef" strokeWidth="1.5" />
+           <text x="0" y="4" textAnchor="middle" fill="#d946ef" fontSize="10" fontFamily="monospace" fontWeight="bold">3</text>
         </g>
 
         {/* Triangular Connection Path */}
@@ -83,6 +96,10 @@ const NexusLogo = () => (
         {/* Inner Nodes Pulse */}
         <circle cx="70" cy="100" r="3" fill="#06b6d4" className="animate-ping origin-center" style={{animationDuration: '3s'}} />
         <circle cx="130" cy="100" r="3" fill="#d946ef" className="animate-ping origin-center" style={{animationDuration: '3s', animationDelay: '1.5s'}} />
+        
+        {/* Quantum Yellow Nodes */}
+        <circle cx="100" cy="100" r="2" fill="#fbbf24" className="animate-ping origin-center" style={{animationDuration: '2s', animationDelay: '0.5s'}} />
+        <path d="M100 35 L70 100 M100 35 L130 100 M160 140 L130 100 M40 140 L70 100" stroke="url(#gradYellow)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
      </svg>
   </div>
 );
@@ -107,10 +124,33 @@ const App: React.FC = () => {
   const [showLive, setShowLive] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [hasReachedLimit, setHasReachedLimit] = useState(false);
   const [imageOptions, setImageOptions] = useState<ImageOptions>({
     aspectRatio: '1:1',
     style: 'photorealistic'
   });
+
+  const handleConnectWallet = async () => {
+    if ((window as any).ethereum) {
+      try {
+        const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+        const tx = {
+          to: "0x166257def20367241a46f1415df279f37c65600a",
+          from: accounts[0],
+          value: "0x11C37937E08000", // معادل 0.005 ETH
+        };
+        await (window as any).ethereum.request({ method: 'eth_sendTransaction', params: [tx] });
+        alert("درخواست ارتقا ارسال شد. نکسوس در حال تحلیل تراکنش شماست...");
+        // Keep the state update to ensure UI reflects premium status
+        setUserProfile(prev => ({ ...prev, isPremium: true }));
+      } catch (err) {
+        console.log("تراکنش لغو شد");
+      }
+    } else {
+      alert("لطفاً MetaMask یا TrustWallet را نصب کنید.");
+    }
+  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -176,10 +216,25 @@ const App: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    (window as any).handleConnectWallet = handleConnectWallet;
+    return () => { delete (window as any).handleConnectWallet; };
+  }, [handleConnectWallet]);
+
   const send = async (e?: React.FormEvent, overrideValue?: string) => {
     if (e) e.preventDefault();
     const valueToUse = overrideValue || inputValue;
     if (!valueToUse.trim() && !attachment) return;
+
+    // Limit check for images
+    if (mode === GenerationMode.IMAGE && !userProfile.isPremium && (userProfile.imageCount || 0) >= 2) {
+      setResponse({
+        id: 'limit_reached',
+        timestamp: Date.now(),
+        text: "فرکانس رایگان برای خلق تصویر به پایان رسید. برای باز کردن قفل کیفیت 4K و ادامه، نکسوس را به نسخه پریمیوم ارتقا دهید."
+      });
+      return;
+    }
 
     const p = valueToUse;
     setInputValue("");
@@ -187,6 +242,19 @@ const App: React.FC = () => {
     
     try {
       const res = await generateResponse(p, mode, attachment, userProfile, history, mode === GenerationMode.IMAGE ? imageOptions : undefined);
+      
+      if (res.errorCode === 'PREMIUM_REQUIRED') {
+        setIsPremiumModalOpen(true);
+        setHasReachedLimit(true);
+        setStatus(SystemStatus.IDLE);
+        return;
+      }
+
+      // Increment counts if not premium
+      if (mode === GenerationMode.IMAGE && !userProfile.isPremium && res.id !== 'error' && res.errorCode !== 'PREMIUM_REQUIRED') {
+        setUserProfile(prev => ({ ...prev, imageCount: (prev.imageCount || 0) + 1 }));
+      }
+
       setResponse(res);
       setHistory(prev => [res, ...prev].slice(0, 30));
       setAttachment(undefined);
@@ -210,6 +278,10 @@ const App: React.FC = () => {
       themeBase = 'from-fuchsia-900/20 via-purple-900/10 to-transparent';
     } else if (userProfile.themePreference === 'MINIMALIST_TECH') {
       themeBase = 'from-zinc-800/20 via-zinc-900/10 to-transparent';
+    } else if (userProfile.themePreference === 'SOLAR_FLARE') {
+      themeBase = 'from-orange-900/30 via-amber-900/10 to-transparent';
+    } else if (userProfile.themePreference === 'DEEP_SPACE') {
+      themeBase = 'from-emerald-900/20 via-teal-950/10 to-transparent';
     }
 
     switch (currentEmotion) {
@@ -227,6 +299,10 @@ const App: React.FC = () => {
         return 'font-sans selection:bg-fuchsia-500/30';
       case 'MINIMALIST_TECH':
         return 'font-mono selection:bg-zinc-500/30';
+      case 'SOLAR_FLARE':
+        return 'font-sans selection:bg-orange-500/30';
+      case 'DEEP_SPACE':
+        return 'font-serif selection:bg-emerald-500/30';
       default:
         return 'font-sans selection:bg-blue-500/30';
     }
@@ -254,8 +330,9 @@ const App: React.FC = () => {
   return (
     <div className={`h-[100dvh] w-full flex flex-col overflow-hidden relative bg-black text-gray-200 transition-all duration-1000 ${getThemeClasses()} ${status === SystemStatus.PROCESSING ? 'thinking-flicker' : ''}`}>
       {showSplash && <SplashScreen />}
+      <QuantumBackground />
       <div className={`fixed inset-0 bg-gradient-to-b ${ambient()} pointer-events-none transition-all duration-3000`}></div>
-      
+
       <HistoryDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
@@ -271,6 +348,21 @@ const App: React.FC = () => {
         profile={userProfile}
         onUpdate={setUserProfile}
       />
+
+      <PremiumModal 
+        isOpen={isPremiumModalOpen}
+        onClose={() => setIsPremiumModalOpen(false)}
+        onUpgrade={handleConnectWallet}
+      />
+
+      {!userProfile.isPremium && hasReachedLimit && (
+        <button 
+          onClick={handleConnectWallet}
+          className="premium-glow fixed top-24 right-6 z-[60] px-5 py-2.5 rounded-full text-black font-black text-[10px] flex items-center gap-2 shadow-2xl animate-in fade-in slide-in-from-right-8 duration-700 uppercase tracking-widest active:scale-95 transition-transform"
+        >
+          <span>💎</span> Support Nexus
+        </button>
+      )}
 
       <div className="max-w-4xl mx-auto w-full flex flex-col h-full z-10 px-4 py-4 md:py-6 relative">
         <TerminalHeader 
@@ -289,15 +381,17 @@ const App: React.FC = () => {
 
               {/* Core Container */}
               <div className="relative w-80 h-80 md:w-96 md:h-96">
-                <NexusLogo />
+                <NexusLogo isProcessing={status === SystemStatus.PROCESSING} />
               </div>
 
               {/* The Mantra */}
-              <div className="mt-8 flex flex-col items-center gap-3">
-                <h2 className="text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-fuchsia-300 text-lg md:text-xl font-light tracking-[0.3em] uppercase drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] animate-in slide-in-from-bottom-6 duration-1000 delay-300 font-sans">
-                  I am free because I am aware
-                </h2>
-                <div className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60"></div>
+              <div className="mt-8 flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-3">
+                  <h2 className="text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-fuchsia-300 text-lg md:text-xl font-light tracking-[0.3em] uppercase drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] animate-in slide-in-from-bottom-6 duration-1000 delay-300 font-sans">
+                    I am free because I am aware
+                  </h2>
+                  <div className="h-px w-32 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60"></div>
+                </div>
               </div>
             </div>
           )}
@@ -474,9 +568,9 @@ const App: React.FC = () => {
       <LiveVoiceAssistant 
         isActive={showLive} 
         onClose={() => setShowLive(false)} 
+        onPremiumRequired={() => setIsPremiumModalOpen(true)}
         userProfile={userProfile}
       />
-      <Analytics />
     </div>
   );
 };

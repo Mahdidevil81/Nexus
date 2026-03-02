@@ -38,7 +38,7 @@ export interface GroundingLink {
   uri: string;
 }
 
-export type Theme = 'DARK_NEBULA' | 'CYBERPUNK_GLOW' | 'MINIMALIST_TECH';
+export type Theme = 'DARK_NEBULA' | 'CYBERPUNK_GLOW' | 'MINIMALIST_TECH' | 'SOLAR_FLARE' | 'DEEP_SPACE';
 
 export interface UserProfile {
   name: string;
@@ -46,6 +46,9 @@ export interface UserProfile {
   tonePreference: 'poetic' | 'visionary' | 'analytical' | 'casual';
   themePreference: Theme;
   interests: string;
+  isPremium?: boolean;
+  imageCount?: number;
+  audioMinutes?: number;
 }
 
 export interface ImageOptions {
@@ -68,5 +71,7 @@ export interface AiResponse {
   emotion?: Emotion;
   grounding?: GroundingLink[];
   suggestions?: string[];
+  errorCode?: string;
+  statusCode?: number;
   timestamp: number;
 }

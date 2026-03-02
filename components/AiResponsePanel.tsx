@@ -363,12 +363,13 @@ const AiResponsePanel: React.FC<AiResponsePanelProps> = ({ response, isTyping, o
 
   if (!content && !isTyping) return null;
 
-  const isAuthError = response?.id === 'auth_error';
+  const isError = response?.id === 'error';
+  const errorCode = response?.errorCode;
 
   return (
     <div className="relative w-full max-w-2xl mx-auto mb-8 animate-in fade-in duration-500">
       {/* Enhanced Deep Glassmorphism Container */}
-      <div className={`p-6 md:p-8 rounded-[3rem] bg-white/5 backdrop-blur-[40px] border ${isAuthError ? 'border-red-500/40' : 'border-white/10'} shadow-[0_32px_128px_rgba(0,0,0,0.6)] transition-all duration-1000`}>
+      <div className={`p-6 md:p-8 rounded-[3rem] bg-white/5 backdrop-blur-[40px] border ${isError ? 'border-red-500/40' : 'border-white/10'} shadow-[0_32px_128px_rgba(0,0,0,0.6)] transition-all duration-1000`}>
         {isTyping && !content && (
           <div className="flex flex-col items-center gap-6 py-12 animate-pulse">
             <div className="flex gap-2">
@@ -380,25 +381,69 @@ const AiResponsePanel: React.FC<AiResponsePanelProps> = ({ response, isTyping, o
 
         {content && (
           <div className="space-y-8">
-            <div className={`prose prose-invert prose-p:leading-relaxed ${isAuthError ? 'prose-p:text-red-300' : 'prose-p:text-gray-100'} prose-p:font-light prose-p:text-lg`} dir="auto">
+            <div className={`prose prose-invert prose-p:leading-relaxed ${isError ? 'prose-p:text-red-300' : 'prose-p:text-gray-100'} prose-p:font-light prose-p:text-lg`} dir="auto">
               <ReactMarkdown>{typedContent}</ReactMarkdown>
             </div>
 
-            {isAuthError && isAnimationComplete && onFixAuth && (
+            {isError && isAnimationComplete && (
               <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/30 flex flex-col items-center gap-6 animate-in slide-in-from-top-2">
-                <p className="text-[10px] text-red-400 uppercase tracking-widest text-center font-bold">
-                  Authentication protocol failed. Premium key required.
-                </p>
-                <button 
-                  onClick={onFixAuth}
-                  className="px-8 py-3 rounded-full bg-red-600 text-white text-[10px] tracking-[0.3em] uppercase font-black hover:bg-red-500 transition-all shadow-lg shadow-red-900/20 active:scale-95"
-                >
-                  Re-Synchronize API Key
-                </button>
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-[10px] text-red-400 uppercase tracking-widest text-center font-bold">
+                    {errorCode === 'AUTH_ERROR' ? 'Authentication protocol failed. Premium key required.' : 
+                     errorCode === 'RATE_LIMIT' ? 'Neural bandwidth exceeded. Please wait.' :
+                     errorCode === 'MODEL_UNAVAILABLE' ? 'Neural model offline in this sector.' :
+                     'Neural Link Interrupted.'}
+                  </p>
+                  {response?.statusCode && (
+                    <span className="text-[9px] text-red-500/60 font-mono">STATUS_CODE: {response.statusCode}</span>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-4">
+                  {errorCode === 'AUTH_ERROR' && onFixAuth && (
+                    <button 
+                      onClick={onFixAuth}
+                      className="px-8 py-3 rounded-full bg-red-600 text-white text-[10px] tracking-[0.3em] uppercase font-black hover:bg-red-500 transition-all shadow-lg shadow-red-900/20 active:scale-95"
+                    >
+                      Re-Synchronize API Key
+                    </button>
+                  )}
+
+                  {errorCode === 'RATE_LIMIT' && (
+                    <a 
+                      href="https://ai.google.dev/gemini-api/docs/quota" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] text-blue-400 hover:text-white uppercase tracking-widest transition-all"
+                    >
+                      View Quota Documentation
+                    </a>
+                  )}
+
+                  {errorCode === 'MODEL_UNAVAILABLE' && (
+                    <a 
+                      href="https://ai.google.dev/gemini-api/docs/models/gemini" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] text-blue-400 hover:text-white uppercase tracking-widest transition-all"
+                    >
+                      Check Model Availability
+                    </a>
+                  )}
+
+                  <a 
+                    href="https://ai.google.dev/gemini-api/docs/troubleshooting" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] text-gray-400 hover:text-white uppercase tracking-widest transition-all"
+                  >
+                    Troubleshooting Guide
+                  </a>
+                </div>
               </div>
             )}
 
-            {isAnimationComplete && !isAuthError && (
+            {isAnimationComplete && !isError && (
               <div className="flex items-center justify-end gap-4 pt-6 mt-4 border-t border-white/5">
                 <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 shadow-lg">
                   <button 

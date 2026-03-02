@@ -137,7 +137,9 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
                 {[
                   { id: 'DARK_NEBULA', label: 'Dark Nebula', color: 'bg-blue-900/40 border-blue-500' },
                   { id: 'CYBERPUNK_GLOW', label: 'Cyberpunk Glow', color: 'bg-fuchsia-900/40 border-fuchsia-500' },
-                  { id: 'MINIMALIST_TECH', label: 'Minimalist Tech', color: 'bg-zinc-800/40 border-zinc-400' }
+                  { id: 'MINIMALIST_TECH', label: 'Minimalist Tech', color: 'bg-zinc-800/40 border-zinc-400' },
+                  { id: 'SOLAR_FLARE', label: 'Solar Flare', color: 'bg-orange-900/40 border-orange-500' },
+                  { id: 'DEEP_SPACE', label: 'Deep Space', color: 'bg-emerald-900/40 border-emerald-500' }
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -164,6 +166,18 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, profile,
                 placeholder="Describe your goals, interests, or how the AI should treat you..."
               />
             </div>
+
+            {!profile.isPremium && (
+              <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <p className="text-yellow-500 text-[10px] mb-3 uppercase tracking-widest font-bold">حمایت از تکامل نکسوس و دسترسی به رازها</p>
+                <button 
+                  onClick={() => (window as any).handleConnectWallet?.()}
+                  className="w-full py-3 premium-glow rounded-xl text-black font-black uppercase tracking-tighter text-xs"
+                >
+                  Payment via Crypto (0.005 ETH)
+                </button>
+              </div>
+            )}
 
             <div className="space-y-3 pt-4">
               <button 

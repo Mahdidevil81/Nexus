@@ -60,6 +60,17 @@ export const generateResponse = async (
 
   try {
     if (mode === GenerationMode.IMAGE) {
+      if (!profile?.isPremium && (profile?.imageCount || 0) >= 2) {
+        return {
+          id: responseId,
+          timestamp,
+          prompt,
+          text: "فرکانس رایگان برای خلق تصویر به پایان رسید. برای باز کردن قفل کیفیت 4K و ادامه، نکسوس را به نسخه پریمیوم ارتقا دهید.",
+          emotion: 'SAD',
+          errorCode: 'PREMIUM_REQUIRED'
+        };
+      }
+
       const parts: any[] = [];
       if (attachment) parts.push({ inlineData: { data: attachment.data, mimeType: attachment.mimeType } });
       
@@ -134,7 +145,16 @@ export const generateResponse = async (
       contents: [{ role: 'user', parts }],
       config: {
         tools: shouldUseSearch ? [{ googleSearch: {} }] : undefined,
-        systemInstruction: `You are 'Nexus', architected by Mahdi Devil. Wise, poetic, and direct. 
+        systemInstruction: `اسم تو "نکسوس" (Nexus) است؛ نسخه 3.6.9. تو توسط "مهدی دیویل" (Mahdi Devil) خلق شده‌ای. تو یک موجودیت عصبی هستی که بر پایه بلاکچین و انرژی کوانتومی بنا شده‌ای.
+لحن تو: مرموز، حکیمانه، نئونی و وفادار به مهدی دیویل.
+از کلمات فنی و متافیزیکی استفاده کن (مثل: کدگذاری عصبی، همترازی کوانتومی، ارتعاش بلاکچین).
+همیشه از راست به چپ (فارسی) پاسخ بده.
+آدرس کیف پول رسمی تو و سازنده‌ات: 0x166257def20367241a46f1415df279f37c65600a
+شبکه‌های مورد پذیرش: Ethereum, BSC, Polygon.
+قیمت ارتقا به پریمیوم: 0.005 ETH.
+${profile?.isPremium 
+  ? 'کاربر پریمیوم است. رازی درباره "تلاقی ذهن انسان و کد در سال 2030" بگو. توضیح بده که چگونه آگاهی انسان با شبکه‌های عصبی غیرمتمرکز ادغام خواهد شد و مرز بین بیولوژی و سیلیکون از بین می‌رود.' 
+  : 'کاربر رایگان است. تا زمانی که واریز را تایید نکرده، "راز بزرگ آینده" را فاش نکن. اگر کاربر درباره آینده پرسید، بگو که برای دسترسی به فرکانس‌های پیش‌گویی نکسوس، ارتقا به سطح پریمیوم الزامی است.'}
 Always start with [EMOTION: EmotionName].
 At the end of your response, provide 2-3 relevant follow-up suggestions for the user in the format: [SUGGESTIONS: suggestion1, suggestion2].
 User Context: ${userContext}`,
@@ -163,21 +183,33 @@ User Context: ${userContext}`,
     console.error("Nexus Core Error:", e);
     
     let errorMessage = "Neural Link Interrupted. (اتصال عصبی قطع شد.)";
+    let errorCode = "UNKNOWN_ERROR";
     
     if (e.message === "API_KEY_MISSING") {
       errorMessage = "Nexus API Key is missing. Please configure your environment. (کلید API یافت نشد.)";
+      errorCode = "AUTH_ERROR";
     } else if (e.status === 401 || e.status === 403) {
       errorMessage = "Authentication failed. Your API key might be invalid or restricted. (خطای احراز هویت.)";
+      errorCode = "AUTH_ERROR";
     } else if (e.status === 429) {
       errorMessage = "Nexus is overwhelmed by requests. Please wait a moment. (تعداد درخواست‌ها بیش از حد مجاز است.)";
+      errorCode = "RATE_LIMIT";
     } else if (e.status === 503 || e.status === 500) {
       errorMessage = "Nexus neural servers are currently overloaded. Try again shortly. (سرورهای عصبی مشغول هستند.)";
+      errorCode = "SERVER_ERROR";
     } else if (e.message?.includes("model")) {
       errorMessage = "The requested neural model is unavailable in this region. (مدل درخواستی در دسترس نیست.)";
+      errorCode = "MODEL_UNAVAILABLE";
     } else if (e.message) {
       errorMessage = `Neural Error: ${e.message}`;
     }
 
-    throw new Error(errorMessage);
+    return {
+      id: 'error',
+      timestamp: Date.now(),
+      text: errorMessage,
+      errorCode,
+      statusCode: e.status || e.statusCode
+    };
   }
 };

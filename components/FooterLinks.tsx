@@ -4,37 +4,92 @@ import { SOCIAL_LINKS } from '../constants';
 
 const FooterLinks: React.FC = () => {
   return (
-    <div className="flex flex-col items-center gap-5 mt-8 pb-4 opacity-60 hover:opacity-100 transition-all duration-1000 group">
-      {/* Social Icons Row */}
-      <div className="flex gap-10">
-        {SOCIAL_LINKS.map((link) => (
-          <a
-            key={link.name}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`transition-all duration-500 hover:scale-150 ${link.color} drop-shadow-[0_0_12px_currentColor]`}
-            title={link.name}
-            dangerouslySetInnerHTML={{ __html: link.icon }}
-          />
-        ))}
-      </div>
+    <>
+      <style>{`
+        .nexus-footer {
+          position: relative;
+          width: 100%;
+          padding: 40px 0;
+          background: linear-gradient(to top, rgba(10, 10, 10, 0.9), transparent);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+          z-index: 10;
+          margin-top: 50px;
+          font-family: 'Inter', sans-serif;
+        }
 
-      {/* Neon Enhanced Legal & Branding Text */}
-      <div className="flex flex-col items-center gap-2 px-6">
-        <p className="text-[10px] md:text-[11px] text-cyan-300/90 text-center leading-relaxed tracking-[0.15em] font-light max-w-xs md:max-w-none [text-shadow:0_0_10px_rgba(6,182,212,0.6)]">
-          Terms and conditions of service and privacy of individuals are protected,
-        </p>
+        .nexus-social-links {
+          display: flex;
+          gap: 30px;
+          align-items: center;
+        }
+
+        .nexus-social-item {
+          color: #C5A059;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: bold;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          transition: all 0.3s ease;
+          opacity: 0.6;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+        }
+
+        .nexus-social-item:hover {
+          opacity: 1;
+          text-shadow: 0 0 10px rgba(197, 160, 89, 0.5);
+          transform: translateY(-3px);
+        }
+
+        .nexus-social-item::after {
+          content: '';
+          width: 0;
+          height: 1px;
+          background: #C5A059;
+          transition: width 0.3s ease;
+        }
+
+        .nexus-social-item:hover::after {
+          width: 100%;
+        }
+
+        .nexus-copyright {
+          font-size: 9px;
+          color: rgba(255, 255, 255, 0.3);
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          margin-top: 10px;
+        }
+
+        .nexus-divider {
+          width: 50px;
+          height: 1px;
+          background: rgba(197, 160, 89, 0.3);
+          margin-bottom: 10px;
+        }
+      `}</style>
+
+      <footer className="nexus-footer">
+        <div className="nexus-divider"></div>
         
-        <div className="flex items-center gap-3">
-          <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-fuchsia-500/50"></div>
-          <p className="text-[11px] md:text-[13px] font-black text-fuchsia-400 tracking-[0.5em] uppercase [text-shadow:0_0_15px_rgba(217,70,239,0.8)] animate-pulse">
-            By MAHDI DEVIL 2026
-          </p>
-          <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-fuchsia-500/50"></div>
+        <div className="nexus-social-links">
+          <a href="https://instagram.com/mahdi.devil" target="_blank" rel="noopener noreferrer" className="nexus-social-item">Instagram</a>
+          <a href="https://t.me/mahdi_devil" target="_blank" rel="noopener noreferrer" className="nexus-social-item">Telegram</a>
+          <a href="https://youtube.com/@mahdidevil" target="_blank" rel="noopener noreferrer" className="nexus-social-item">YouTube</a>
+          <a href="https://github.com/mahdidevil" target="_blank" rel="noopener noreferrer" className="nexus-social-item">GitHub</a>
         </div>
-      </div>
-    </div>
+
+        <div className="nexus-copyright">
+          © 2026 Nexus Consciousness • Architected by Mahdi Devil
+        </div>
+      </footer>
+    </>
   );
 };
 
