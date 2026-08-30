@@ -1,37 +1,169 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
-const SplashScreen: React.FC = () => {
+interface SplashScreenProps {
+  onComplete: () => void;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+}
+
+const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
+  const [isExiting, setIsExiting] = useState(false);
+  const [showDaVinci, setShowDaVinci] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const requestRef = useRef<number | undefined>(undefined);
+
+  const handleExit = () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    setTimeout(onComplete, 1500);
+  };
+
+  useEffect(() => {
+    // Auto-exit after 3 seconds
+    const timer = setTimeout(handleExit, 3000);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Initialize quantum particles
+    const particleCount = 40;
+    particlesRef.current = Array.from({ length: particleCount }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 1.5 + 0.5,
+      color: Math.random() > 0.5 ? '#22d3ee' : '#d946ef'
+    }));
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const particles = particlesRef.current;
+      
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + '22';
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p.x - p2.x;
+          const dy = p.y - p2.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < 40000) { // 200 * 200
+            const dist = Math.sqrt(distSq);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(34, 211, 238, ${0.05 * (1 - dist / 200)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      });
+      requestRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out fill-mode-forwards delay-[3000ms] duration-500">
-      <div className="relative group">
-        <h1 className="text-7xl md:text-9xl font-black tracking-[0.5em] text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-fuchsia-500 animate-in zoom-in duration-1500 relative z-10 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-          NEXUS
-        </h1>
-        <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 via-cyan-400 to-fuchsia-600 blur-3xl opacity-30 animate-pulse -z-10 group-hover:opacity-50 transition-opacity"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-20 animate-[scan_3s_linear_infinite]"></div>
-      </div>
-      
-      <p className="mt-8 text-sm md:text-base font-medium text-gray-400 tracking-[0.4em] uppercase opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-1000 fill-mode-forwards">
-        Architected by <span className="text-blue-400 font-bold">Mahdi Devil</span>
-      </p>
-      
-      <div className="mt-16 w-48 h-px bg-white/5 relative overflow-hidden rounded-full">
-        <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent -translate-x-full animate-[loading_3.5s_cubic-bezier(0.65,0,0.35,1)_forwards]"></div>
-      </div>
+    <AnimatePresence>
+      {!isExiting && (
+        <motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ 
+            opacity: 0,
+            scale: 1.1,
+            filter: 'blur(40px)',
+            transition: { duration: 1.5, ease: "easeInOut" }
+          }}
+          className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden"
+        >
+          <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 pointer-events-none z-10"
+          />
 
-      <style>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        @keyframes scan {
-          0% { transform: translate(-50%, -100px); opacity: 0; }
-          50% { opacity: 0.5; }
-          100% { transform: translate(-50%, 100px); opacity: 0; }
-        }
-      `}</style>
-    </div>
+          <div className="relative z-20 flex flex-col items-center">
+            {/* Nexus Text Only */}
+            <motion.div
+              initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="flex flex-col items-center"
+            >
+              <h1 className="text-6xl md:text-8xl font-black tracking-[0.5em] text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-fuchsia-500 drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]">
+                NEXUS
+              </h1>
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ delay: 0.8, duration: 1.2 }}
+                className="h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent mt-6"
+              ></motion.div>
+            </motion.div>
+          </div>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5 }}
+            className="absolute bottom-12 flex flex-col items-center gap-2"
+          >
+            <div className="flex gap-1">
+              {[0, 0.2, 0.4].map(d => (
+                <div 
+                  key={d} 
+                  className="w-1 h-1 rounded-full bg-blue-500/40" 
+                  style={{ animation: `neural-pulse 1.5s infinite ease-in-out ${d}s` }}
+                ></div>
+              ))}
+            </div>
+            <span className="text-[8px] text-gray-600 uppercase tracking-[0.8em]">Neural Synchronization</span>
+          </motion.div>
+
+          <style>{`
+            @keyframes scan {
+              0% { transform: translateY(0); opacity: 0; }
+              50% { opacity: 0.5; }
+              100% { transform: translateY(192px); opacity: 0; }
+            }
+          `}</style>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
-export default SplashScreen;
+export default React.memo(SplashScreen);

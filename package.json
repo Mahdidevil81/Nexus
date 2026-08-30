@@ -10,11 +10,13 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.40.0",
-    "motion": "^12.34.3",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-markdown": "^10.1.0"
+    "@google/genai": "latest",
+    "lucide-react": "^0.475.0",
+    "motion": "^12.4.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.3",
+    "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1154/1154972.png">
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;400;700&display=swap" rel="stylesheet">
     <style>
       body {
@@ -100,6 +100,121 @@
       }
       .thinking-flicker {
         animation: subtle-flicker 0.2s infinite;
+      }
+
+      /* Advanced Neural Loading Animations */
+      @keyframes neural-pulse {
+        0% { transform: scale(0.8); opacity: 0.2; filter: blur(1px); }
+        50% { transform: scale(1.1); opacity: 0.8; filter: blur(0px); }
+        100% { transform: scale(0.8); opacity: 0.2; filter: blur(1px); }
+      }
+      
+      @keyframes orbit {
+        from { transform: rotate(0deg) translateX(18px) rotate(0deg); }
+        to { transform: rotate(360deg) translateX(18px) rotate(-360deg); }
+      }
+
+      @keyframes orbit-reverse {
+        from { transform: rotate(360deg) translateX(25px) rotate(-360deg); }
+        to { transform: rotate(0deg) translateX(25px) rotate(0deg); }
+      }
+
+      .nexus-loader-node {
+        width: 6px;
+        height: 6px;
+        background: #06b6d4;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #06b6d4;
+        animation: neural-pulse 2s infinite ease-in-out;
+      }
+
+      .nexus-loader-orbit {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: #d946ef;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #d946ef;
+        animation: orbit 2.5s infinite linear;
+      }
+
+      .nexus-loader-orbit-outer {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: #06b6d4;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #06b6d4;
+        animation: orbit-reverse 4s infinite linear;
+      }
+
+      @keyframes quantum-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .quantum-cluster {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        animation: quantum-rotate 10s infinite linear;
+      }
+
+      .quantum-dot {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: #06b6d4;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #06b6d4;
+      }
+
+      .quantum-line {
+        position: absolute;
+        height: 1px;
+        background: linear-gradient(90deg, #06b6d4, transparent);
+        transform-origin: left center;
+        opacity: 0.3;
+      }
+
+      @keyframes scan-line {
+        0% { transform: translateY(-100%); opacity: 0; }
+        50% { opacity: 0.5; }
+        100% { transform: translateY(100%); opacity: 0; }
+      }
+      
+      .neural-scan {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to bottom, transparent, rgba(6, 182, 212, 0.1), transparent);
+        animation: scan-line 3s infinite linear;
+        pointer-events: none;
+      }
+
+      @keyframes data-stream {
+        0% { transform: translateX(-100%); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateX(100%); opacity: 0; }
+      }
+      .data-stream-line {
+        position: absolute;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+        animation: data-stream 2s infinite linear;
+      }
+
+      @keyframes neural-ripple {
+        0% { transform: scale(0); opacity: 0.5; }
+        100% { transform: scale(4); opacity: 0; }
+      }
+
+      .ripple-effect {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(6, 182, 212, 0.3);
+        transform: scale(0);
+        animation: neural-ripple 0.6s ease-out;
+        pointer-events: none;
       }
 
       .premium-glow {

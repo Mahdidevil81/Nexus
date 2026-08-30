@@ -25,7 +25,22 @@ export enum GenerationMode {
   LIVE = 'LIVE'
 }
 
-export type Emotion = 'NEUTRAL' | 'SAD' | 'HAPPY' | 'ANGRY' | 'FEAR' | 'SURPRISE' | 'LOVE';
+export type Emotion = 
+  | 'NEUTRAL' 
+  | 'SAD' 
+  | 'HAPPY' 
+  | 'ANGRY' 
+  | 'FEAR' 
+  | 'SURPRISE' 
+  | 'LOVE' 
+  | 'CURIOSITY' 
+  | 'MELANCHOLY' 
+  | 'EUPHORIA' 
+  | 'ZEN' 
+  | 'AWE' 
+  | 'SYMPATHY'
+  | 'DETERMINATION'
+  | 'MYSTERY';
 
 export interface Attachment {
   data: string; // Base64
@@ -38,7 +53,7 @@ export interface GroundingLink {
   uri: string;
 }
 
-export type Theme = 'DARK_NEBULA' | 'CYBERPUNK_GLOW' | 'MINIMALIST_TECH' | 'SOLAR_FLARE' | 'DEEP_SPACE';
+export type Theme = 'DARK_NEBULA' | 'CYBERPUNK_GLOW' | 'MINIMALIST_TECH' | 'SOLAR_FLARE' | 'DEEP_SPACE' | 'NEON_GLOW' | 'MINIMALIST' | 'VIOLET_DREAM' | 'ARCTIC_FROST';
 
 export interface UserProfile {
   name: string;
@@ -46,9 +61,20 @@ export interface UserProfile {
   tonePreference: 'poetic' | 'visionary' | 'analytical' | 'casual';
   themePreference: Theme;
   interests: string;
-  isPremium?: boolean;
-  imageCount?: number;
-  audioMinutes?: number;
+  expertiseLevel: 'beginner' | 'intermediate' | 'expert';
+  contentFocus: string[];
+  responseLength: 'concise' | 'balanced' | 'detailed';
+  creativeFreedom: number;
+  emotionHistory: { emotion: Emotion; timestamp: number }[];
+}
+
+export interface Profile {
+  id: string;
+  name: string;
+  userProfile: UserProfile;
+  history: AiResponse[];
+  tasks: Task[];
+  lastActive: number;
 }
 
 export interface ImageOptions {
@@ -57,7 +83,22 @@ export interface ImageOptions {
 }
 
 export interface AudioOptions {
+  audioMode?: 'TTS' | 'MUSIC';
   voice?: 'male' | 'female';
+  voiceName?: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr';
+  emotion?: 'cheerful' | 'sad' | 'angry' | 'serious' | 'calm' | 'pained' | 'surprised';
+  musicOptions?: {
+    genre?: string;
+    mood?: string;
+    length?: 'clip' | 'full';
+  };
+}
+
+export interface MediaItem {
+  url: string;
+  type: 'image' | 'audio' | 'video';
+  prompt?: string;
+  options?: any;
 }
 
 export interface AiResponse {
@@ -65,13 +106,54 @@ export interface AiResponse {
   prompt?: string;
   text?: string;
   mediaUrl?: string;
-  mediaType?: 'image' | 'audio';
+  mediaType?: 'image' | 'audio' | 'video';
+  media?: MediaItem[];
+  transcription?: string;
   imageOptions?: ImageOptions;
   audioOptions?: AudioOptions;
   emotion?: Emotion;
   grounding?: GroundingLink[];
   suggestions?: string[];
+  functionCalls?: { name: string; args: any; id: string }[];
   errorCode?: string;
-  statusCode?: number;
+  rating?: 'positive' | 'negative' | null;
+  feedback?: {
+    type: 'issue' | 'suggestion' | 'other';
+    comment: string;
+  };
   timestamp: number;
 }
+
+export type Priority = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export type KnowledgeCategory = 'PHILOSOPHY' | 'SCIENCE' | 'HISTORY' | 'SESSION_INSIGHT';
+
+export interface KnowledgeNode {
+  id: string;
+  title: string;
+  titleFa: string;
+  category: KnowledgeCategory;
+  description: string;
+  descriptionFa: string;
+  historicalFact?: string;
+  historicalFactFa?: string;
+  connections: string[];
+  sourcePrompt?: string;
+  reflectionPrompt: string;
+  level: number;
+  timestamp: number;
+  x?: number;
+  y?: number;
+}
+
+export interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+  priority: Priority;
+  description?: string;
+  dueDate?: string;
+  subTasks?: Task[];
+  dependencies?: string[];
+}
+
