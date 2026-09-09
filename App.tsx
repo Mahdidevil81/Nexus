@@ -31,6 +31,7 @@ import NeuralDashboard from './components/NeuralDashboard';
 import NexusLogo from './components/NexusLogo';
 import NexusDataRelay from './components/NexusDataRelay';
 import KnowledgeMapDrawer from './components/KnowledgeMapDrawer';
+import PremiumModal from './components/PremiumModal';
 import { SystemStatus, GenerationMode, AiResponse, Emotion, Attachment, UserProfile, ImageOptions, AudioOptions, Theme, Task, Profile, Priority } from './types';
 import { generateResponse, getInspirationPrompts } from './services/geminiService';
 import { audioManager } from './utils/audioManager';
@@ -264,6 +265,8 @@ const App: React.FC = () => {
   const [isKnowledgeMapOpen, setIsKnowledgeMapOpen] = useState(false);
   const [isRelayOpen, setIsRelayOpen] = useState(false);
   const [isDesktopMode, setIsDesktopMode] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean>(() => localStorage.getItem('nexus_is_premium') === 'true');
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [imageOptions, setImageOptions] = useState<ImageOptions>({
     aspectRatio: '1:1',
     style: 'photorealistic'
@@ -788,9 +791,11 @@ const App: React.FC = () => {
           onDesktopToggle={() => setIsDesktopMode(!isDesktopMode)}
           onArchiveClick={() => setIsArchiveOpen(true)}
           onKnowledgeMapClick={() => setIsKnowledgeMapOpen(true)}
+          onPremiumClick={() => setIsPremiumModalOpen(true)}
           isDesktopMode={isDesktopMode}
           status={status}
           language={userProfile.languagePreference}
+          isPremium={isPremium}
         />
         
         <div className="flex-grow overflow-y-auto scrollbar-hide py-4 space-y-8 relative flex flex-col items-center justify-center">
@@ -1155,6 +1160,15 @@ const App: React.FC = () => {
           onDeleteTask={deleteTask}
         />
       )}
+
+      <PremiumModal 
+        isOpen={isPremiumModalOpen} 
+        onClose={() => setIsPremiumModalOpen(false)}
+        onUpgrade={() => {
+          setIsPremium(true);
+          localStorage.setItem('nexus_is_premium', 'true');
+        }}
+      />
     </div>
   );
 };

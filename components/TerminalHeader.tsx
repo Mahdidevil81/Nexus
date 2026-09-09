@@ -20,9 +20,11 @@ interface TerminalHeaderProps {
   onDesktopToggle?: () => void;
   onArchiveClick?: () => void;
   onKnowledgeMapClick?: () => void;
+  onPremiumClick?: () => void;
   isDesktopMode?: boolean;
   status: SystemStatus;
   language: string;
+  isPremium?: boolean;
 }
 
 const TerminalHeader: React.FC<TerminalHeaderProps> = ({ 
@@ -32,9 +34,11 @@ const TerminalHeader: React.FC<TerminalHeaderProps> = ({
   onDesktopToggle, 
   onArchiveClick, 
   onKnowledgeMapClick,
+  onPremiumClick,
   isDesktopMode, 
   status, 
-  language 
+  language,
+  isPremium
 }) => {
   const getStatusConfig = () => {
     switch (status) {
@@ -78,6 +82,20 @@ const TerminalHeader: React.FC<TerminalHeaderProps> = ({
             >
               <Languages size={12} className="md:w-[14px] md:h-[14px]" />
               <span className="hidden xs:inline">{language === 'en' ? 'FA' : 'EN'}</span>
+            </button>
+
+            {/* Premium / Upgrade Button */}
+            <button 
+              onClick={onPremiumClick}
+              className={`px-2.5 md:px-3 py-1.5 rounded-full border transition-all active:scale-95 text-[9px] md:text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5 shadow-lg ${
+                isPremium 
+                  ? 'bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 border-yellow-500/40 text-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.25)]' 
+                  : 'bg-gradient-to-r from-yellow-500/10 via-amber-500/20 to-yellow-500/10 border-yellow-500/30 text-yellow-500/90 hover:text-white hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)]'
+              }`}
+              title={isPremium ? "Premium Activated" : "Upgrade to Premium"}
+            >
+              <span className={isPremium ? "scale-110" : "animate-bounce"}>💎</span>
+              <span>{isPremium ? (language === 'en' ? 'PREMIUM' : 'پرمیوم') : (language === 'en' ? 'UPGRADE' : 'ارتقا')}</span>
             </button>
 
             {/* Consolidate secondary controls on tiny screens or keep them desktop only */}
