@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "user_profile": {
+      "title": "UserProfile",
+      "description": "The cognitive identity settings of a user profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "languagePreference": { "type": "string", "enum": ["auto", "fa", "en"] },
+        "tonePreference": { "type": "string", "enum": ["poetic", "visionary", "analytical", "casual"] },
+        "themePreference": { "type": "string" },
+        "interests": { "type": "string", "maxLength": 1000 },
+        "expertiseLevel": { "type": "string", "enum": ["beginner", "intermediate", "expert"] },
+        "contentFocus": { "type": "array" },
+        "responseLength": { "type": "string", "enum": ["concise", "balanced", "detailed"] },
+        "creativeFreedom": { "type": "integer" },
+        "emotionHistory": { "type": "array" }
+      },
+      "required": ["name", "languagePreference", "tonePreference", "themePreference", "interests"]
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "A complete user profile core with dialogue history, tasks, and settings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 100 },
+        "userProfile": { "$ref": "user_profile" },
+        "lastActive": { "type": "integer" }
+      },
+      "required": ["id", "name", "userProfile", "lastActive"]
+    }
+  },
+  "firestore": {
+    "/profiles/{profileId}": {
+      "schema": "profile",
+      "description": "User profiles database mapping identities and configurations."
+    }
+  }
+}

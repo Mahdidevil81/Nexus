@@ -247,6 +247,19 @@
 }
 </script>
   <link rel="stylesheet" href="/index.css">
+  <script>
+    window.gm_authFailure = function() {
+      window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+    };
+    const _origError = console.error;
+    console.error = function(...args) {
+      _origError.apply(console, args);
+      const msg = args.map(a => String(a)).join(' ');
+      if (msg.includes('OverQuotaMapError') || msg.includes('QuotaExceededError')) {
+        window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+      }
+    };
+  </script>
 </head>
   <body>
     <div class="stars-container">
@@ -256,7 +269,6 @@
       <div id="stars3"></div>
     </div>
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
-  <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

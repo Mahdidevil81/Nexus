@@ -9,7 +9,11 @@ import {
   Cpu,
   Fingerprint,
   FolderArchive,
-  Network
+  Network,
+  Mail,
+  Calendar as CalendarIcon,
+  MapPin,
+  HardDrive
 } from 'lucide-react';
 import { SystemStatus } from '../types';
 
@@ -20,6 +24,10 @@ interface TerminalHeaderProps {
   onDesktopToggle?: () => void;
   onArchiveClick?: () => void;
   onKnowledgeMapClick?: () => void;
+  onGmailClick?: () => void;
+  onCalendarClick?: () => void;
+  onMapsClick?: () => void;
+  onDriveClick?: () => void;
   onPremiumClick?: () => void;
   isDesktopMode?: boolean;
   status: SystemStatus;
@@ -34,6 +42,10 @@ const TerminalHeader: React.FC<TerminalHeaderProps> = ({
   onDesktopToggle, 
   onArchiveClick, 
   onKnowledgeMapClick,
+  onGmailClick,
+  onCalendarClick,
+  onMapsClick,
+  onDriveClick,
   onPremiumClick,
   isDesktopMode, 
   status, 
@@ -165,6 +177,110 @@ const TerminalHeader: React.FC<TerminalHeaderProps> = ({
                   </div>
                   <p className="text-[9px] text-gray-300 leading-relaxed text-right font-light">
                     {language === 'en' ? 'Explore connected concepts, historical milestones, and grow alongside Nexus.' : 'کاوش مفاهیم متصل، حقایق تاریخی و رشد دوشادوش آگاهی نکسوس.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Gmail / Transmissions Button */}
+            <div className="relative group/gmail">
+              <button 
+                onClick={onGmailClick}
+                className="p-2.5 md:p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:text-white hover:bg-blue-500/20 hover:border-blue-400/50 transition-all active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.15)] group"
+                title="Gmail Transmissions (G)"
+              >
+                <Mail size={20} className="md:w-[24px] md:h-[24px] group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" strokeWidth={1.5} />
+              </button>
+              
+              {/* Tooltip */}
+              <div className="absolute top-full right-0 mt-3 hidden group-hover/gmail:flex flex-col items-end z-50 pointer-events-none">
+                <div className="bg-black/95 backdrop-blur-md border border-blue-500/30 rounded-xl p-3 shadow-[0_0_20px_rgba(59,130,246,0.3)] w-48 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                    <Mail size={13} className="text-blue-400" />
+                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                      {language === 'en' ? 'Gmail Transmissions' : 'ارتباطات جیمیل'}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-gray-300 leading-relaxed text-right font-light">
+                    {language === 'en' ? 'Connect to Google Workspace to read, manage, and dispatch emails.' : 'اتصال به گوگل برای خواندن، مدیریت و ارسال ایمیل‌ها.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Google Calendar Button */}
+            <div className="relative group/calendar">
+              <button 
+                onClick={onCalendarClick}
+                className="p-2.5 md:p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:text-white hover:bg-cyan-500/20 hover:border-cyan-400/50 transition-all active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.15)] group"
+                title="Google Calendar (C)"
+              >
+                <CalendarIcon size={20} className="md:w-[24px] md:h-[24px] group-hover:scale-110 group-hover:text-cyan-300 transition-all duration-300" strokeWidth={1.5} />
+              </button>
+              
+              {/* Tooltip */}
+              <div className="absolute top-full right-0 mt-3 hidden group-hover/calendar:flex flex-col items-end z-50 pointer-events-none">
+                <div className="bg-black/95 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3 shadow-[0_0_20px_rgba(6,182,212,0.3)] w-48 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                    <CalendarIcon size={13} className="text-cyan-400" />
+                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">
+                      {language === 'en' ? 'Google Calendar' : 'تقویم گوگل'}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-gray-300 leading-relaxed text-right font-light">
+                    {language === 'en' ? 'View and schedule events and synchronize Nexus tasks.' : 'مشاهده و زمان‌بندی رویدادها و اهداف نکسوس.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Google Maps Button */}
+            <div className="relative group/maps">
+              <button 
+                onClick={onMapsClick}
+                className="p-2.5 md:p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:text-white hover:bg-indigo-500/20 hover:border-indigo-400/50 transition-all active:scale-95 shadow-[0_0_15px_rgba(99,102,241,0.15)] group"
+                title="Geospatial Map (M)"
+              >
+                <MapPin size={20} className="md:w-[24px] md:h-[24px] group-hover:scale-110 group-hover:text-indigo-300 transition-all duration-300" strokeWidth={1.5} />
+              </button>
+              
+              {/* Tooltip */}
+              <div className="absolute top-full right-0 mt-3 hidden group-hover/maps:flex flex-col items-end z-50 pointer-events-none">
+                <div className="bg-black/95 backdrop-blur-md border border-indigo-500/30 rounded-xl p-3 shadow-[0_0_20px_rgba(99,102,241,0.3)] w-48 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                    <MapPin size={13} className="text-indigo-400" />
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                      {language === 'en' ? 'Google Maps Grid' : 'شبکه گوگل مپس'}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-gray-300 leading-relaxed text-right font-light">
+                    {language === 'en' ? 'Explore global research nodes and interactive geospatial coordinates.' : 'کاوش گره‌های تحقیقاتی جهان و مختصات جغرافیایی.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Google Drive Button */}
+            <div className="relative group/drive">
+              <button 
+                onClick={onDriveClick}
+                className="p-2.5 md:p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:text-white hover:bg-emerald-500/20 hover:border-emerald-400/50 transition-all active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.15)] group"
+                title="Google Drive (D)"
+              >
+                <HardDrive size={20} className="md:w-[24px] md:h-[24px] group-hover:scale-110 group-hover:text-emerald-300 transition-all duration-300" strokeWidth={1.5} />
+              </button>
+              
+              {/* Tooltip */}
+              <div className="absolute top-full right-0 mt-3 hidden group-hover/drive:flex flex-col items-end z-50 pointer-events-none">
+                <div className="bg-black/95 backdrop-blur-md border border-emerald-500/30 rounded-xl p-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] w-48 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                    <HardDrive size={13} className="text-emerald-400" />
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                      {language === 'en' ? 'Google Drive' : 'گوگل درایو'}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-gray-300 leading-relaxed text-right font-light">
+                    {language === 'en' ? 'Manage cloud storage, documents, and backup Nexus archives.' : 'مدیریت فایل‌های ابری، اسناد و ذخیره حافظه نکسوس.'}
                   </p>
                 </div>
               </div>

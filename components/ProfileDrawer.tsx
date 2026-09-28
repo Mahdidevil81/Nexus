@@ -37,8 +37,10 @@ import {
   Save,
   Trash,
   Settings,
-  Share2
+  Share2,
+  Calendar
 } from 'lucide-react';
+import MonthlyEmotionalHeatmap from './MonthlyEmotionalHeatmap';
 
 interface ProfileDrawerProps {
   isOpen: boolean;
@@ -120,6 +122,17 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     onUpdate(reset);
     setHasSaved(false);
     setShowResetConfirm(false);
+  };
+
+  const handleUpdateEmotionHistory = (newHistory: { emotion: Emotion; timestamp: number }[]) => {
+    setLocalProfile(prev => ({
+      ...prev,
+      emotionHistory: newHistory
+    }));
+    onUpdate({
+      ...localProfile,
+      emotionHistory: newHistory
+    });
   };
 
   const toggleSection = (section: string) => {
@@ -953,6 +966,37 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     ) : (
                       <div className="text-center py-4 text-[9px] text-gray-600 uppercase tracking-widest">No analytics data available</div>
                     )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+
+            {/* Monthly Emotional Heatmap Section */}
+            <section className="border border-white/5 rounded-2xl overflow-hidden bg-white/[0.02]">
+              <button 
+                onClick={() => toggleSection('heatmap')}
+                aria-expanded={expandedSection === 'heatmap'}
+                className="w-full p-4 flex items-center justify-between hover:bg-white/[0.03] transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                   <Calendar size={14} className="text-pink-400" />
+                   <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Monthly Emotional Heatmap</span>
+                </div>
+                <ChevronDown size={14} className={`text-gray-600 transition-transform duration-300 ${expandedSection === 'heatmap' ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {expandedSection === 'heatmap' && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="px-4 pb-4"
+                  >
+                    <MonthlyEmotionalHeatmap
+                      emotionHistory={localProfile.emotionHistory || []}
+                      onUpdateEmotionHistory={handleUpdateEmotionHistory}
+                      language={localProfile.languagePreference}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>

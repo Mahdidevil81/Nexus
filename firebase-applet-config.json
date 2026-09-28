@@ -1,0 +1,9 @@
+{
+  "apiKey": "mock_api_key_for_nexus_preview",
+  "authDomain": "keen-apogee-488513-g9.firebaseapp.com",
+  "projectId": "keen-apogee-488513-g9",
+  "storageBucket": "keen-apogee-488513-g9.appspot.com",
+  "messagingSenderId": "1234567890",
+  "appId": "1:1234567890:web:abcdef1234567890",
+  "firestoreDatabaseId": "(default)"
+}

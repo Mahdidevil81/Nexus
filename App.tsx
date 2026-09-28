@@ -32,6 +32,10 @@ import NexusLogo from './components/NexusLogo';
 import NexusDataRelay from './components/NexusDataRelay';
 import KnowledgeMapDrawer from './components/KnowledgeMapDrawer';
 import PremiumModal from './components/PremiumModal';
+import GmailDrawer from './components/GmailDrawer';
+import CalendarDrawer from './components/CalendarDrawer';
+import GoogleMapsDrawer from './components/GoogleMapsDrawer';
+import DriveDrawer from './components/DriveDrawer';
 import { SystemStatus, GenerationMode, AiResponse, Emotion, Attachment, UserProfile, ImageOptions, AudioOptions, Theme, Task, Profile, Priority } from './types';
 import { generateResponse, getInspirationPrompts } from './services/geminiService';
 import { audioManager } from './utils/audioManager';
@@ -264,6 +268,10 @@ const App: React.FC = () => {
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isKnowledgeMapOpen, setIsKnowledgeMapOpen] = useState(false);
   const [isRelayOpen, setIsRelayOpen] = useState(false);
+  const [isGmailOpen, setIsGmailOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isMapsOpen, setIsMapsOpen] = useState(false);
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
   const [isDesktopMode, setIsDesktopMode] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean>(() => localStorage.getItem('nexus_is_premium') === 'true');
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
@@ -468,12 +476,56 @@ const App: React.FC = () => {
         setIsDrawerOpen(false);
         setIsTaskOpen(false);
         setIsArchiveOpen(false);
+        setIsCalendarOpen(false);
+        setIsMapsOpen(false);
+      } else if (key === 'c') {
+        e.preventDefault();
+        setIsCalendarOpen(prev => !prev);
+        setIsProfileOpen(false);
+        setIsDrawerOpen(false);
+        setIsTaskOpen(false);
+        setIsKnowledgeMapOpen(false);
+        setIsGmailOpen(false);
+        setIsMapsOpen(false);
+      } else if (key === 'm') {
+        e.preventDefault();
+        setIsMapsOpen(prev => !prev);
+        setIsProfileOpen(false);
+        setIsDrawerOpen(false);
+        setIsTaskOpen(false);
+        setIsKnowledgeMapOpen(false);
+        setIsGmailOpen(false);
+        setIsCalendarOpen(false);
+      } else if (key === 'g') {
+        e.preventDefault();
+        setIsGmailOpen(prev => !prev);
+        setIsProfileOpen(false);
+        setIsDrawerOpen(false);
+        setIsTaskOpen(false);
+        setIsKnowledgeMapOpen(false);
+        setIsCalendarOpen(false);
+        setIsMapsOpen(false);
+        setIsDriveOpen(false);
+      } else if (key === 'd') {
+        e.preventDefault();
+        setIsDriveOpen(prev => !prev);
+        setIsProfileOpen(false);
+        setIsDrawerOpen(false);
+        setIsTaskOpen(false);
+        setIsKnowledgeMapOpen(false);
+        setIsCalendarOpen(false);
+        setIsMapsOpen(false);
+        setIsGmailOpen(false);
       } else if (key === 'escape') {
         setIsProfileOpen(false);
         setIsDrawerOpen(false);
         setIsTaskOpen(false);
         setIsArchiveOpen(false);
         setIsKnowledgeMapOpen(false);
+        setIsGmailOpen(false);
+        setIsCalendarOpen(false);
+        setIsMapsOpen(false);
+        setIsDriveOpen(false);
       }
     };
 
@@ -552,7 +604,7 @@ const App: React.FC = () => {
         setCurrentEmotion(res.emotion);
         setUserProfile(prev => ({
           ...prev,
-          emotionHistory: [{ emotion: res.emotion!, timestamp: Date.now() }, ...(prev.emotionHistory || [])].slice(0, 50)
+          emotionHistory: [{ emotion: res.emotion!, timestamp: Date.now() }, ...(prev.emotionHistory || [])].slice(0, 500)
         }));
       }
     } catch (err: any) {
@@ -712,6 +764,34 @@ const App: React.FC = () => {
         onExploreConcept={(prompt) => send(undefined, prompt)}
       />
 
+      <GmailDrawer
+        isOpen={isGmailOpen}
+        onClose={() => setIsGmailOpen(false)}
+        language={userProfile.languagePreference as 'en' | 'fa'}
+      />
+
+      <CalendarDrawer
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        language={userProfile.languagePreference as 'en' | 'fa'}
+        tasks={tasks}
+      />
+
+      <GoogleMapsDrawer
+        isOpen={isMapsOpen}
+        onClose={() => setIsMapsOpen(false)}
+        language={userProfile.languagePreference as 'en' | 'fa'}
+      />
+
+      <DriveDrawer
+        isOpen={isDriveOpen}
+        onClose={() => setIsDriveOpen(false)}
+        language={userProfile.languagePreference as 'en' | 'fa'}
+        history={history}
+        tasks={tasks}
+        userProfile={userProfile}
+      />
+
       {/* Task List Drawer */}
       <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-all duration-500 ${isTaskOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsTaskOpen(false)}></div>
@@ -791,6 +871,10 @@ const App: React.FC = () => {
           onDesktopToggle={() => setIsDesktopMode(!isDesktopMode)}
           onArchiveClick={() => setIsArchiveOpen(true)}
           onKnowledgeMapClick={() => setIsKnowledgeMapOpen(true)}
+          onGmailClick={() => setIsGmailOpen(true)}
+          onCalendarClick={() => setIsCalendarOpen(true)}
+          onMapsClick={() => setIsMapsOpen(true)}
+          onDriveClick={() => setIsDriveOpen(true)}
           onPremiumClick={() => setIsPremiumModalOpen(true)}
           isDesktopMode={isDesktopMode}
           status={status}

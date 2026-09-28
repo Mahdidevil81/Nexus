@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable, hardened global security helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Hardened user profile validation helper function to protect structural integrity
+    function isValidProfile(data) {
+      return data.keys().hasAll(['id', 'name', 'userProfile', 'lastActive'])
+        && data.keys().hasOnly(['id', 'name', 'userProfile', 'history', 'tasks', 'lastActive'])
+        && data.id is string
+        && data.name is string
+        && data.name.size() <= 100
+        && data.lastActive is int
+        && data.userProfile is map
+        && data.userProfile.name is string
+        && data.userProfile.name.size() <= 100
+        && data.userProfile.languagePreference is string
+        && (data.userProfile.languagePreference == 'auto' || data.userProfile.languagePreference == 'fa' || data.userProfile.languagePreference == 'en')
+        && data.userProfile.tonePreference is string
+        && (data.userProfile.tonePreference == 'poetic' || data.userProfile.tonePreference == 'visionary' || data.userProfile.tonePreference == 'analytical' || data.userProfile.tonePreference == 'casual')
+        && data.userProfile.themePreference is string
+        && data.userProfile.interests is string
+        && data.userProfile.interests.size() <= 1000
+        && data.userProfile.expertiseLevel is string
+        && (data.userProfile.expertiseLevel == 'beginner' || data.userProfile.expertiseLevel == 'intermediate' || data.userProfile.expertiseLevel == 'expert')
+        && data.userProfile.creativeFreedom is int
+        && data.userProfile.creativeFreedom >= 0 && data.userProfile.creativeFreedom <= 100;
+    }
+
+    // Secure profiles path matching our blueprint definitions
+    match /profiles/{profileId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(profileId) && isValidProfile(incoming());
+      allow update: if isSignedIn() && isValidId(profileId) && isValidProfile(incoming()) && (
+        // Enforce that immutable fields such as the ID are not changed
+        incoming().id == existing().id
+      );
+      allow delete: if isSignedIn() && isValidId(profileId);
+    }
+  }
+}

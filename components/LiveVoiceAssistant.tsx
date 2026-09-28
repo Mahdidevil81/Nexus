@@ -281,8 +281,9 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
   }, [status, volume, aiVolume, isAiSpeaking]);
 
   const startSession = async () => {
-    // Attempt to use the default GEMINI_API_KEY for free tier access
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Retrieve the base64 encoded API key and decode it, ensuring it works in both dev and preview environments
+    const b64 = process.env.GEMINI_API_KEY_B64 || process.env.API_KEY_B64;
+    const apiKey = b64 ? atob(b64) : undefined;
 
     if (!apiKey) {
       setErrorMessage("Nexus Neural Link Key not found. Please ensure the system is properly configured.");
@@ -293,7 +294,16 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
     setStatus('CONNECTING');
     setErrorMessage("");
     
-    const ai = new GoogleGenAI({ apiKey });
+    // Specifying v1alpha apiVersion is mandatory for the Live API to function and send the initial setup message correctly
+    const ai = new GoogleGenAI({ 
+      apiKey,
+      httpOptions: {
+        apiVersion: 'v1alpha',
+        headers: {
+          'User-Agent': 'aistudio-build'
+        }
+      }
+    });
     
     try {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
@@ -334,7 +344,7 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
       }
 
       const sessionPromise = ai.live.connect({
-        model: 'gemini-3.1-flash-live-preview',
+        model: 'gemini-3.8-live',
         callbacks: {
           onopen: () => {
             setStatus('LISTENING');
