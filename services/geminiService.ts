@@ -131,8 +131,50 @@ const addWavHeader = (base64Pcm: string): string => {
 };
 
 export const generateWithFallback = async (ai: any, params: any): Promise<any> => {
-  const models = params.model ? [params.model, 'gemini-3.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'] : ['gemini-3.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
-  const uniqueModels = Array.from(new Set(models));
+  const isImageTask = params.model?.includes('image') || Boolean(params.config?.imageConfig);
+  const isTranscribeTask = params.model?.includes('transcribe');
+  const isTtsTask = params.model?.includes('tts') || 
+                    params.config?.responseModalities?.includes(Modality.AUDIO) ||
+                    params.config?.responseModalities?.includes("AUDIO");
+
+  let fallbackList: string[] = [];
+
+  if (isImageTask) {
+    fallbackList = [
+      params.model,
+      'gemini-3.1-flash-lite-image',
+      'gemini-3.1-flash-image'
+    ];
+  } else if (isTranscribeTask) {
+    fallbackList = [
+      params.model,
+      'gemini-3.5-transcribe',
+      'gemini-3.8-flash',
+      'gemini-flash-latest'
+    ];
+  } else if (isTtsTask) {
+    fallbackList = [
+      params.model?.includes('tts') ? params.model : 'gemini-3.8-flash-lite-tts',
+      'gemini-3.8-flash-lite-tts',
+      'gemini-3.8-flash-tts'
+    ];
+  } else {
+    fallbackList = [
+      params.model,
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite'
+    ];
+  }
+
+  // Filter out any deprecated or non-existent legacy models
+  const legacyModels = new Set([
+    'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.0-pro', 
+    'gemini-2.5-flash', 'gemini-2.5-flash-image', 'gemini-3.5-flash'
+  ]);
+
+  const sanitizedModels = fallbackList.filter(m => Boolean(m) && !legacyModels.has(m));
+  const uniqueModels = Array.from(new Set(sanitizedModels.length > 0 ? sanitizedModels : ['gemini-3.8-flash', 'gemini-flash-latest']));
   
   let lastError = null;
   for (const model of uniqueModels) {
@@ -145,9 +187,21 @@ export const generateWithFallback = async (ai: any, params: any): Promise<any> =
       return res;
     } catch (e: any) {
       lastError = e;
-      const errStr = e.message || JSON.stringify(e);
-      if (errStr.includes("permission") || errStr.includes("403") || errStr.includes("not found") || errStr.includes("404") || errStr.includes("not supported")) {
-        console.warn(`[Nexus Model Selector] Model ${model} failed, trying next fallback...`);
+      const errStr = (e?.message || JSON.stringify(e || "")).toLowerCase();
+      const status = e?.status || e?.error?.code || e?.code;
+      const isRecoverable = 
+        status === 404 || 
+        status === 403 || 
+        errStr.includes("not found") || 
+        errStr.includes("404") || 
+        errStr.includes("not_found") || 
+        errStr.includes("permission") || 
+        errStr.includes("403") || 
+        errStr.includes("not supported") ||
+        errStr.includes("unsupported");
+
+      if (isRecoverable) {
+        console.warn(`[Nexus Model Selector] Model ${model} failed (${status || 'error'}), trying next fallback...`);
         continue;
       }
       throw e;
@@ -206,7 +260,7 @@ ${tasks.map(t => `- [ID: ${t.id}] ${t.text} (${t.completed ? 'Completed' : 'Acti
       parts.push({ text: finalPrompt });
       
       const response = await retryWithBackoff(() => generateWithFallback(ai, { 
-        model: 'gemini-2.5-flash-image', 
+        model: 'gemini-3.1-flash-lite-image', 
         contents: [{ parts }],
         config: {
           imageConfig: {
@@ -299,7 +353,7 @@ ${tasks.map(t => `- [ID: ${t.id}] ${t.text} (${t.completed ? 'Completed' : 'Acti
 
       // Default to TTS logic with enhanced options
       const textRes = await retryWithBackoff(() => generateWithFallback(ai, {
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
           tools: shouldUseSearch ? [{ googleSearch: {} }] : undefined,
@@ -339,7 +393,7 @@ ${tasks.map(t => `- [ID: ${t.id}] ${t.text} (${t.completed ? 'Completed' : 'Acti
       const inflectionPrompt = audioOptions?.emotion ? `Say ${audioOptions.emotion}: ` : '';
       
       const ttsResponse = await retryWithBackoff(() => generateWithFallback(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash-lite-tts",
         contents: [{ parts: [{ text: `${inflectionPrompt}${cleanText}` }] }],
         config: { 
           responseModalities: [Modality.AUDIO], 
@@ -373,7 +427,7 @@ ${tasks.map(t => `- [ID: ${t.id}] ${t.text} (${t.completed ? 'Completed' : 'Acti
     parts.push({ text: prompt || "Reflect on the current state." });
 
     const res = await retryWithBackoff(() => generateWithFallback(ai, {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts }],
       config: {
         tools: [
@@ -458,6 +512,7 @@ ${taskContext}`,
     
     let errorMessage = "Neural Link Interrupted. (اتصال عصبی قطع شد.)";
     let errorCode = "UNKNOWN_ERROR";
+    const status = e?.status || e?.error?.code || e?.code;
     
     if (e.message === "API_KEY_MISSING") {
       errorMessage = "Nexus API Key is missing. Please configure your environment. (کلید API یافت نشد.)";
@@ -465,14 +520,20 @@ ${taskContext}`,
     } else if (isSuspended) {
       errorMessage = "Your Workspace Gemini API Key is suspended. Please go to the Settings menu (top right of AI Studio) to provide a valid API key so Nexus can reconnect. (کلید API نکسوس تعلیق شده است. لطفا از منوی تنظیمات در بالا سمت راست AI Studio، یک کلید معتبر وارد کنید تا اتصال نکسوس برقرار شود.)";
       errorCode = "KEY_SUSPENDED";
-    } else if (e.status === 401 || e.status === 403) {
+    } else if (status === 401 || status === 403 || errorStr.includes("403") || errorStr.includes("permission_denied")) {
       errorMessage = "Authentication failed. Your API key might be invalid or restricted. (خطای احراز هویت.)";
       errorCode = "AUTH_ERROR";
-    } else if (e.status === 429) {
+    } else if (status === 404 || errorStr.includes("404") || errorStr.includes("not found") || errorStr.includes("not_found")) {
+      errorMessage = "Neural model frequency not found. Realigning with latest Nexus core... (مدل درخواستی یافت نشد.)";
+      errorCode = "NOT_FOUND";
+    } else if (errorStr.includes("xhr error") || errorStr.includes("ProxyUnaryCall") || errorStr.includes("alkalimakersuite") || errorStr.includes("MakerSuiteService") || errorStr.includes("Rpc failed")) {
+      errorMessage = "Google AI Studio proxy link blocked. If you are using an adblocker (AdGuard, uBlock Origin) or Brave Shields, please disable them for this page and refresh to reconnect the neural link. (اتصال پروکسی گوگل مسدود شده است. لطفاً مسدودکننده تبلیغات یا سپر Brave را غیرفعال کرده و صفحه را رفرش کنید.)";
+      errorCode = "PROXY_BLOCKED";
+    } else if (status === 429) {
       errorMessage = "Nexus is overwhelmed by requests. Please wait a moment. (تعداد درخواست‌ها بیش از حد مجاز است.)";
       errorCode = "RATE_LIMIT";
-    } else if (e.status === 503 || e.status === 500) {
-      errorMessage = "Nexus neural servers are currently overloaded. Try again shortly. (سرورهای عصبی مشغول هستند.)";
+    } else if (status === 503 || status === 500 || errorStr.includes("500") || errorStr.includes("INTERNAL")) {
+      errorMessage = "Nexus neural servers are currently overloaded or encountered an internal RPC error. Try again shortly. (سرورهای عصبی مشغول هستند یا خطای داخلی رخ داده است.)";
       errorCode = "SERVER_ERROR";
     } else if (e.message?.includes("model")) {
       errorMessage = "The requested neural model is unavailable in this region. (مدل درخواستی در دسترس نیست.)";
@@ -519,7 +580,7 @@ export const getInspirationPrompts = async (history: AiResponse[], profile: User
     Return ONLY a JSON array of 3 strings.`;
 
     const res = await generateWithFallback(ai, {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -554,7 +615,7 @@ export const getWordContext = async (word: string, fullText: string): Promise<{ 
     Return ONLY a JSON object: { "definition": "...", "related": ["...", "...", "..."] }`;
 
     const res = await generateWithFallback(ai, {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -573,7 +634,7 @@ export const transcribeAudio = async (audioBase64: string): Promise<string> => {
   try {
     const ai = getClient();
     const response = await generateWithFallback(ai, {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-transcribe',
       contents: [
         {
           parts: [

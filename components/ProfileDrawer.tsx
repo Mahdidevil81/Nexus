@@ -3,6 +3,19 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, Profile, Emotion } from '../types';
 import { CREATOR, PHILOSOPHY, SOCIAL_LINKS } from '../constants';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ReferenceLine
+} from 'recharts';
 import { 
   Instagram, 
   Github, 
@@ -23,7 +36,8 @@ import {
   Cpu,
   Save,
   Trash,
-  Settings
+  Settings,
+  Share2
 } from 'lucide-react';
 
 interface ProfileDrawerProps {
@@ -131,6 +145,180 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
       MYSTERY: 'text-violet-400'
     };
     return colors[emotion] || 'text-white';
+  };
+
+  const EMOTION_SCORES: Record<Emotion, number> = {
+    EUPHORIA: 10,
+    LOVE: 9,
+    AWE: 8,
+    ZEN: 7,
+    HAPPY: 6,
+    DETERMINATION: 5,
+    CURIOSITY: 4,
+    MYSTERY: 3,
+    SYMPATHY: 2,
+    SURPRISE: 1,
+    NEUTRAL: 0,
+    FEAR: -1,
+    MELANCHOLY: -2,
+    SAD: -3,
+    ANGRY: -4
+  };
+
+  const chartData = [...(localProfile.emotionHistory || [])]
+    .reverse()
+    .map((item) => ({
+      name: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      score: EMOTION_SCORES[item.emotion] ?? 0,
+      emotion: item.emotion,
+      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    }));
+
+  const emotionFrequency = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (localProfile.emotionHistory) {
+      localProfile.emotionHistory.forEach((eh) => {
+        counts[eh.emotion] = (counts[eh.emotion] || 0) + 1;
+      });
+    }
+    return Object.entries(counts)
+      .map(([emotion, count]) => ({
+        emotion,
+        count
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [localProfile.emotionHistory]);
+
+  const handleExportAnalytics = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Matrix Grid Lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // Border Frame
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+    // Title Block
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('NEXUS RESEARCH AI LAB', 40, 50);
+
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '8px monospace';
+    ctx.fillText('AURA PROTOCOL // COGNITIVE INTEGRATION DIAGNOSTIC', 40, 68);
+
+    // Metadata
+    ctx.fillStyle = '#14b8a6';
+    ctx.font = '9px monospace';
+    ctx.fillText(`SUBJECT: ${localProfile.name.toUpperCase()}`, 40, 95);
+
+    ctx.fillStyle = '#6b7280';
+    ctx.fillText(`TOTAL DIALOGUES ENCRYPTED: ${localProfile.emotionHistory?.length || 0}`, 40, 110);
+
+    // Draw Frequency Bars
+    const startX = 40;
+    let startY = 145;
+    const barWidthMax = 400;
+    const barHeight = 18;
+    const spacing = 12;
+
+    const topEmotions = emotionFrequency.slice(0, 5);
+
+    topEmotions.forEach((ef) => {
+      const total = localProfile.emotionHistory?.length || 1;
+      const pct = ef.count / total;
+
+      // Emotion text label
+      ctx.fillStyle = '#e5e7eb';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(ef.emotion, startX, startY + 12);
+
+      // Value label
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '9px monospace';
+      ctx.fillText(`${ef.count}x (${Math.round(pct * 100)}%)`, startX + 410, startY + 12);
+
+      // Track background
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.fillRect(startX + 100, startY, barWidthMax - 100, barHeight);
+
+      // Color ranges matching getEmotionColor
+      const colors: Record<string, string[]> = {
+        NEUTRAL: ['#4b5563', '#9ca3af'],
+        HAPPY: ['#047857', '#34d399'],
+        SAD: ['#1d4ed8', '#60a5fa'],
+        ANGRY: ['#b91c1c', '#f87171'],
+        FEAR: ['#6d28d9', '#c084fc'],
+        SURPRISE: ['#a16207', '#facc15'],
+        LOVE: ['#be185d', '#f472b6'],
+        CURIOSITY: ['#0e7490', '#22d3ee'],
+        MELANCHOLY: ['#4338ca', '#818cf8'],
+        EUPHORIA: ['#c2410c', '#fb923c'],
+        ZEN: ['#0f766e', '#2dd4bf'],
+        AWE: ['#0369a1', '#38bdf8'],
+        SYMPATHY: ['#be123c', '#f43f5e'],
+        DETERMINATION: ['#b45309', '#fbbf24'],
+        MYSTERY: ['#5b21b6', '#a78bfa']
+      };
+
+      const range = colors[ef.emotion] || ['#4b5563', '#9ca3af'];
+      const gradient = ctx.createLinearGradient(startX + 100, 0, startX + 100 + (barWidthMax - 100) * pct, 0);
+      gradient.addColorStop(0, range[0]);
+      gradient.addColorStop(1, range[1]);
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(startX + 100, startY, (barWidthMax - 100) * pct, barHeight);
+
+      startY += barHeight + spacing;
+    });
+
+    // Divider Line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath();
+    ctx.moveTo(40, 345);
+    ctx.lineTo(canvas.width - 40, 345);
+    ctx.stroke();
+
+    // Bottom Credits
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('I AM FREE BECAUSE I AM AWARE. // من آزادم چون آگاهم', 40, 365);
+
+    ctx.textAlign = 'right';
+    ctx.fillText('ARCHITECTED BY MAHDI DEVIL', canvas.width - 40, 365);
+
+    // Save
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexus-resonance-${localProfile.name.toLowerCase()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -555,7 +743,66 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     exit={{ height: 0, opacity: 0 }}
                     className="px-4 pb-4"
                   >
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-hide">
+                    {localProfile.emotionHistory && localProfile.emotionHistory.length > 0 && (
+                      <div className="w-full h-36 bg-white/[0.01] border border-white/5 rounded-xl p-2 mb-3">
+                        <div className="text-[7px] text-gray-500 uppercase tracking-widest font-mono mb-1">Neural Resonance Trend</div>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 2, right: 5, left: -32, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="#333" 
+                              fontSize={6}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis 
+                              stroke="#333" 
+                              fontSize={6}
+                              domain={[-5, 11]}
+                              tickLine={false}
+                              axisLine={false}
+                              ticks={[-4, 0, 5, 10]}
+                            />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-black/95 border border-white/10 px-1.5 py-1 rounded-md backdrop-blur-md shadow-xl text-[7px] uppercase tracking-wider">
+                                      <p className="text-gray-600 font-mono text-[6px]">{data.time}</p>
+                                      <p className="mt-0.5 font-bold flex items-center gap-1">
+                                        <span className={getEmotionColor(data.emotion)}>{data.emotion}</span>
+                                        <span className="text-gray-500 font-normal font-mono">({data.score >= 0 ? `+${data.score}` : data.score})</span>
+                                      </p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <ReferenceLine y={0} stroke="rgba(255,255,255,0.04)" strokeDasharray="2 2" />
+                            <Line 
+                              type="monotone" 
+                              dataKey="score" 
+                              stroke="url(#resonanceGradient)" 
+                              strokeWidth={1.5} 
+                              dot={{ r: 1.5, strokeWidth: 0, fill: '#14b8a6' }} 
+                              activeDot={{ r: 3, strokeWidth: 1, stroke: '#fff' }}
+                            />
+                            <defs>
+                              <linearGradient id="resonanceGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#a78bfa" />
+                                <stop offset="50%" stopColor="#2dd4bf" />
+                                <stop offset="100%" stopColor="#f43f5e" />
+                              </linearGradient>
+                            </defs>
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-hide">
                       {localProfile.emotionHistory && localProfile.emotionHistory.length > 0 ? (
                         localProfile.emotionHistory.map((eh, i) => (
                           <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
@@ -571,6 +818,141 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                         <div className="text-center py-4 text-[9px] text-gray-600 uppercase tracking-widest">No emotional data recorded</div>
                       )}
                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+
+            {/* Emotion Analytics Section */}
+            <section className="border border-white/5 rounded-2xl overflow-hidden bg-white/[0.02]">
+              <button 
+                onClick={() => toggleSection('analytics')}
+                aria-expanded={expandedSection === 'analytics'}
+                className="w-full p-4 flex items-center justify-between hover:bg-white/[0.03] transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                   <Cpu size={14} className="text-cyan-500" />
+                   <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Emotion Analytics</span>
+                </div>
+                <ChevronDown size={14} className={`text-gray-600 transition-transform duration-300 ${expandedSection === 'analytics' ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {expandedSection === 'analytics' && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="px-4 pb-4"
+                  >
+                    {emotionFrequency.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="w-full h-36 bg-white/[0.01] border border-white/5 rounded-xl p-2">
+                          <div className="text-[7px] text-gray-500 uppercase tracking-widest font-mono mb-1">Emotion Frequencies</div>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={emotionFrequency} margin={{ top: 2, right: 5, left: -32, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
+                              <XAxis 
+                                dataKey="emotion" 
+                                stroke="#333" 
+                                fontSize={5}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(val) => val.slice(0, 4)}
+                              />
+                              <YAxis 
+                                stroke="#333" 
+                                fontSize={6}
+                                allowDecimals={false}
+                                tickLine={false}
+                                axisLine={false}
+                              />
+                              <Tooltip 
+                                cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-black/95 border border-white/10 px-1.5 py-1 rounded-md backdrop-blur-md shadow-xl text-[7px] uppercase tracking-wider">
+                                        <p className="font-bold flex items-center gap-1">
+                                          <span className={getEmotionColor(data.emotion as any)}>{data.emotion}</span>
+                                          <span className="text-gray-500 font-mono">({data.count} times)</span>
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                                {emotionFrequency.map((entry, index) => {
+                                  const colors: Record<string, string> = {
+                                    NEUTRAL: '#9ca3af',
+                                    HAPPY: '#34d399',
+                                    SAD: '#60a5fa',
+                                    ANGRY: '#f87171',
+                                    FEAR: '#c084fc',
+                                    SURPRISE: '#facc15',
+                                    LOVE: '#f472b6',
+                                    CURIOSITY: '#22d3ee',
+                                    MELANCHOLY: '#818cf8',
+                                    EUPHORIA: '#fb923c',
+                                    ZEN: '#2dd4bf',
+                                    AWE: '#38bdf8',
+                                    SYMPATHY: '#f43f5e',
+                                    DETERMINATION: '#fbbf24',
+                                    MYSTERY: '#a78bfa'
+                                  };
+                                  const fill = colors[entry.emotion] || '#ffffff';
+                                  return <Cell key={`cell-${index}`} fill={fill} fillOpacity={0.85} />;
+                                })}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
+                          {emotionFrequency.map((ef, index) => {
+                            const total = localProfile.emotionHistory?.length || 1;
+                            const percentage = Math.round((ef.count / total) * 100);
+                            return (
+                              <div key={index} className="space-y-1">
+                                <div className="flex justify-between items-center text-[7px] uppercase tracking-widest font-mono">
+                                  <span className={getEmotionColor(ef.emotion as any)}>{ef.emotion}</span>
+                                  <span className="text-gray-500">{ef.count} ({percentage}%)</span>
+                                </div>
+                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full transition-all duration-1000" 
+                                    style={{ 
+                                      width: `${percentage}%`,
+                                      backgroundColor: 
+                                        ef.emotion === 'HAPPY' ? '#10b981' :
+                                        ef.emotion === 'SAD' ? '#3b82f6' :
+                                        ef.emotion === 'ANGRY' ? '#ef4444' :
+                                        ef.emotion === 'LOVE' ? '#ec4899' :
+                                        ef.emotion === 'EUPHORIA' ? '#f97316' :
+                                        ef.emotion === 'ZEN' ? '#14b8a6' :
+                                        ef.emotion === 'AWE' ? '#0ea5e9' :
+                                        '#6b7280'
+                                    }} 
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          onClick={handleExportAnalytics}
+                          className="w-full mt-2 p-2 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/5 rounded-xl text-[8px] uppercase tracking-widest font-mono font-bold transition-all group"
+                        >
+                          <Share2 size={12} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                          <span>Export Resonance Card</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-[9px] text-gray-600 uppercase tracking-widest">No analytics data available</div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

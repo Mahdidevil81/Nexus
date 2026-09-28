@@ -338,41 +338,6 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
         callbacks: {
           onopen: () => {
             setStatus('LISTENING');
-            if (audioContextRef.current && streamRef.current) {
-              const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
-              const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
-              
-              scriptProcessor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0);
-                
-                // Calculate volume
-                let sum = 0;
-                for (let i = 0; i < inputData.length; i++) {
-                  sum += inputData[i] * inputData[i];
-                }
-                const rms = Math.sqrt(sum / inputData.length);
-                setVolume(prev => prev * 0.7 + rms * 0.3); // Smooth volume
-
-                const l = inputData.length;
-                const int16 = new Int16Array(l);
-                for (let i = 0; i < l; i++) {
-                  int16[i] = inputData[i] * 32768;
-                }
-                sessionPromise.then(session => {
-                  session.sendRealtimeInput({
-                    audio: { 
-                      data: encode(new Uint8Array(int16.buffer)), 
-                      mimeType: 'audio/pcm;rate=16000' 
-                    }
-                  });
-                }).catch(err => {
-                  console.error("Session Input Error:", err);
-                });
-              };
-              
-              source.connect(scriptProcessor);
-              scriptProcessor.connect(audioContextRef.current.destination);
-            }
           },
           onmessage: async (message: LiveServerMessage) => {
             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
@@ -445,9 +410,13 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
                 }
                 responses.push({ name: fc.name, response: result, id: fc.id });
               }
-              sessionPromise.then(session => {
-                session.sendToolResponse({ functionResponses: responses });
-              });
+              if (sessionRef.current) {
+                sessionRef.current.sendToolResponse({ functionResponses: responses });
+              } else {
+                sessionPromise.then(session => {
+                  session.sendToolResponse({ functionResponses: responses });
+                }).catch(err => console.error("sendToolResponse error:", err));
+              }
             }
 
             if (message.serverContent?.outputTranscription) {
@@ -568,7 +537,42 @@ export const LiveVoiceAssistant: React.FC<LiveVoiceAssistantProps> = ({ isActive
         }
       });
 
-      sessionRef.current = await sessionPromise;
+      const session = await sessionPromise;
+      sessionRef.current = session;
+
+      // Start audio recording and sending now that the session is fully established and ready!
+      if (audioContextRef.current && streamRef.current) {
+        const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
+        const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+        
+        scriptProcessor.onaudioprocess = (e) => {
+          const inputData = e.inputBuffer.getChannelData(0);
+          
+          // Calculate volume
+          let sum = 0;
+          for (let i = 0; i < inputData.length; i++) {
+            sum += inputData[i] * inputData[i];
+          }
+          const rms = Math.sqrt(sum / inputData.length);
+          setVolume(prev => prev * 0.7 + rms * 0.3); // Smooth volume
+
+          const l = inputData.length;
+          const int16 = new Int16Array(l);
+          for (let i = 0; i < l; i++) {
+            int16[i] = inputData[i] * 32768;
+          }
+          
+          session.sendRealtimeInput({
+            audio: { 
+              data: encode(new Uint8Array(int16.buffer)), 
+              mimeType: 'audio/pcm;rate=16000' 
+            }
+          });
+        };
+        
+        source.connect(scriptProcessor);
+        scriptProcessor.connect(audioContextRef.current.destination);
+      }
     } catch (err: any) {
       console.error(err);
       setStatus('ERROR');
